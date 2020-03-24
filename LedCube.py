@@ -14,6 +14,15 @@ import sceneKit as scn
 import ui
 import math
 
+def flatten(x):
+  stack=[x]
+  while stack:
+    y=stack.pop()
+    if hasattr(y,'__iter__'):
+      stack.extend(reversed(y))
+    else:
+      yield y
+
 def grayToInt(gray):
   mask=gray>>1
   result=gray
@@ -106,6 +115,7 @@ class Demo:
           self.root_node.addChildNode(self.sphere_nodes[i][j][k])
           self.sphere_nodes[i][j][k].setPosition((x,y,z))
           self.sphere_nodes[i][j][k].eulerAngles=(0.61547970867039,0,math.pi/4)
+    self.index=0
     constraint = scn.LookAtConstraint(self.root_node)#(self.sphere_nodes[2][2][2])    
     constraint.gimbalLockEnabled = True
     self.camera_node.constraints = constraint
@@ -125,37 +135,38 @@ class Demo:
     self.main_view.present(style='fullscreen', hide_title_bar=False)
   
   def update(self, view, atTime):
+    def update_Led(index,blink_phase,red_led,green_led,off_led,pos_wire,neg_wire,off_wire):
+      index=index % 256
+      gray=index^(index>>1)
+      ix=(2,3,1,0)[gray>>2&2|gray>>0&1]
+      iy=(2,3,1,0)[gray>>3&2|gray>>1&1]
+      iz=(2,3,1,0)[gray>>4&2|gray>>2&1]
+      ic=gray>>7 & 1
+      ib=(gray>>6 & 1) 
+      ib=ib and blink_phase
+      if ib: 
+        neg_wire=off_wire
+      xwire,ywire,led=((neg_wire,pos_wire,red_led),(pos_wire,neg_wire,green_led))[ic]
+      if ib:
+        led=off_led
+      self.sphere_nodes[ix][iy][iz].setGeometry(led)
+      self.wire_nodes[1][ix][iy].setGeometry(xwire)
+      self.wire_nodes[1][ix][3-iy].setGeometry(xwire)
+      self.wire_nodes[0][ix][((1,3,0,2),(2,0,3,1))[(iy+1)%2][ix]].setGeometry(xwire)   
+      self.wire_nodes[2][iy][iz].setGeometry(ywire)
+      self.wire_nodes[2][iy^1][iz].setGeometry(ywire)
+      self.wire_nodes[0][((3,1,2,0),(0,2,1,3))[iy//2][iz]][iz].setGeometry(ywire)
+      
     n_blink=3
     tick = int(atTime*7) % (256*2*n_blink)
-    index=tick//(2*n_blink)
-    gray=index^(index>>1)
-    ix=(2,3,1,0)[gray>>2&2|gray>>0&1]
-    iy=(2,3,1,0)[gray>>3&2|gray>>1&1]
-    iz=(2,3,1,0)[gray>>4&2|gray>>2&1]
-    self.sphere_nodes[ix][iy][iz].setGeometry(self.off_sphere)
-    self.wire_nodes[1][ix][iy].setGeometry(self.off_wire)
-    self.wire_nodes[1][ix][3-iy].setGeometry(self.off_wire)
-    self.wire_nodes[0][ix][((1,3,0,2),(2,0,3,1))[(iy+1)%2][ix]].setGeometry(self.off_wire)
-    self.wire_nodes[2][iy][iz].setGeometry(self.off_wire)
-    self.wire_nodes[2][iy^1][iz].setGeometry(self.off_wire)
-    self.wire_nodes[0][((3,1,2,0),(0,2,1,3))[iy//2][iz]][iz].setGeometry(self.off_wire)
+
+    update_Led(self.index,tick%2,self.off_sphere,self.off_sphere,self.off_sphere, self.off_wire,self.off_wire,self.off_wire) 
     
-    index=(index+1)%256
-    gray=index^(index>>1)
-    ix=(2,3,1,0)[gray>>2&2|gray>>0&1]
-    iy=(2,3,1,0)[gray>>3&2|gray>>1&1]
-    iz=(2,3,1,0)[gray>>4&2|gray>>2&1]
-    xwire,ywire,led=(
-      (self.blue_wire,self.red_wire,self.red_sphere),
-      (self.red_wire,self.blue_wire,self.green_sphere),
-      (self.blue_wire if tick%2 else self.off_wire,self.red_wire,self.red_sphere if tick%2 else self.off_sphere),
-      (self.red_wire,self.blue_wire if tick%2 else self.off_wire,self.green_sphere if tick%2 else self.off_sphere))[(gray>>6) & 3]
-    self.sphere_nodes[ix][iy][iz].setGeometry(led)
-    self.wire_nodes[1][ix][iy].setGeometry(xwire)
-    self.wire_nodes[1][ix][3-iy].setGeometry(xwire)
-    self.wire_nodes[0][ix][((1,3,0,2),(2,0,3,1))[(iy+1)%2][ix]].setGeometry(xwire)   
-    self.wire_nodes[2][iy][iz].setGeometry(ywire)
-    self.wire_nodes[2][iy^1][iz].setGeometry(ywire)
-    self.wire_nodes[0][((3,1,2,0),(0,2,1,3))[iy//2][iz]][iz].setGeometry(ywire)
+    self.index=tick//(2*n_blink)
+#    for wn in flatten(self.wire_nodes):
+#      wn.setGeometry(self.off_wire)
+#    for ln in flatten(self.sphere_nodes):
+#      ln.setGeometry(self.off_sphere)
+    update_Led(self.index,tick%2,self.red_sphere,self.green_sphere,self.off_sphere, self.red_wire,self.blue_wire,self.off_wire)
 
 Demo.run()
