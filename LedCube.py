@@ -14,8 +14,8 @@ import sceneKit as scn
 import ui
 import math
 
-def flatten(x):
-  stack=[x]
+def flatten(*arg):
+  stack=list(reversed(arg))
   while stack:
     y=stack.pop()
     if hasattr(y,'__iter__'):
@@ -138,9 +138,9 @@ class Demo:
     def update_Led(index,blink_phase,red_led,green_led,off_led,pos_wire,neg_wire,off_wire):
       index=index % 256
       gray=index^(index>>1)
-      ix=(2,3,1,0)[gray>>2&2|gray>>0&1]
-      iy=(2,3,1,0)[gray>>3&2|gray>>1&1]
-      iz=(2,3,1,0)[gray>>4&2|gray>>2&1]
+      iz=(2,3,1,0)[gray>>2&2|gray>>0&1]
+      ix=(2,3,1,0)[gray>>3&2|gray>>1&1]
+      iy=(2,3,1,0)[gray>>4&2|gray>>2&1]
       ic=gray>>7 & 1
       ib=(gray>>6 & 1) 
       ib=ib and blink_phase
