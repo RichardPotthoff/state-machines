@@ -7,12 +7,142 @@ A 4x4x4 cube of LEDs for the visual display of the state of a state machine with
   The demo shows a Hamiltonian path through all 256 states. 
   
 """
+from collections import namedtuple
+def countBits(n):
+  n = (n & 0x5555555555555555) + ((n & 0xAAAAAAAAAAAAAAAA) >> 1)
+  n = (n & 0x3333333333333333) + ((n & 0xCCCCCCCCCCCCCCCC) >> 2)
+  n = (n & 0x0F0F0F0F0F0F0F0F) + ((n & 0xF0F0F0F0F0F0F0F0) >> 4)
+  n = (n & 0x00FF00FF00FF00FF) + ((n & 0xFF00FF00FF00FF00) >> 8)
+  n = (n & 0x0000FFFF0000FFFF) + ((n & 0xFFFF0000FFFF0000) >> 16)
+  n = (n & 0x00000000FFFFFFFF) + ((n & 0xFFFFFFFF00000000) >> 32) # This last & isn't strictly necessary.
+  return n
 
+pinspec=namedtuple('pinspec','name, input, output')
+pinspec.__new__.__defaults__=('',0,0)
+
+class Component(object):
+  def __init__(self):
+    self.activePins=set()
+class Node(Component):
+  pass
+class IC(Component):
+  pins={}
+  outputpins=frozenset(key for key,value in pins.items() if value.output)
+  inputpins=frozenset(key for key,value in pins.items() if value.input)
+  @classmethod
+  def data_from_pins(cls,pins): 
+    return functools.reduce(operator.__or__,(cls.pins[p].output for p in pins&cls.outputpins),0)
+  @classmethod
+  def pins_from_data(cls,dat): return {d for d in cls.outputpins if cls.pins[d].output&dat}
+  @classmethod
+  def address_from_pins(cls,pins): 
+    return functools.reduce(operator.__or__,(cls.pins[p].input for p in pins&cls.inputpins),0)
+  @classmethod
+  def pins_from_address(cls,adr): return {a for a in cls.inputpins if cls.pins[a].input&adr}
+  @classmethod
+  def _outputpins(cls):
+    return frozenset(key for key,value in cls.pins.items() if value.output)
+  @classmethod
+  def test(cls):
+    return cls
+  def __init__(self):
+    super().__init__()
+#    self.inputpins=type(self).inputpins
+  pass
+class Eprom(IC):
+  pins={
+        1:pinspec('VPP',    0,    0,), 28:pinspec('VCC',    0,    0,),
+        2:pinspec('A12',1<<12,    0,), 27:pinspec('A14',1<<14,    0,),
+        3:pinspec('A07', 1<<7,    0,), 26:pinspec('A13',1<<13,    0,),
+        4:pinspec('A06', 1<<6,    0,), 25:pinspec('A08', 1<<8,    0,),
+        5:pinspec('A05', 1<<5,    0,), 24:pinspec('A09', 1<<9,    0,),
+        6:pinspec('A04', 1<<4,    0,), 23:pinspec('A11',1<<11,    0,),
+        7:pinspec('A03', 1<<3,    0,), 22:pinspec('/OE',    0,    0,),
+        8:pinspec('A02', 1<<2,    0,), 21:pinspec('A10',1<<10,    0,),
+        9:pinspec('A01', 1<<1,    0,), 20:pinspec('/CE',    0,    0,),
+       10:pinspec('A00', 1<<0,    0,), 19:pinspec('D07',    0, 1<<7,),
+       11:pinspec('D00',    0, 1<<0,), 18:pinspec('D06',    0, 1<<6,),
+       12:pinspec('D01',    0, 1<<1,), 17:pinspec('D05',    0, 1<<5,),
+       13:pinspec('D02',    0, 1<<2,), 16:pinspec('D04',    0, 1<<4,),
+       14:pinspec('VSS',    0,    0,), 15:pinspec('D03',    0, 1<<3,),
+        }
+  outputpins=datapins=frozenset(key for key,value in pins.items() if value.output)
+  inputpins=addresspins=frozenset(key for key,value in pins.items() if value.input)
+    
+  def __init__(self):
+    super().__init__()
+  def setPin(self,pin):
+    self.activePins.add(pin)
+#    print(self.activePins)
+  def clearPin(self,pin):
+    self.activePins.discard(pin)
+#    print(self.activePins)
+  def pinStatus(self,pin):
+    return pin in self.activePins
+
+class Eprom1(Eprom):
+  KeypadPins=frozenset((23,24,25,26,27))
+  def __init__(self):
+    super().__init__()
+  def run(self):
+    self.activePins-=self.pins_from_data(255)
+    self.activePins|=self.pins_from_data(self.data_from_address(self.address_from_pins(self.activePins)))
+    
+  def data_from_address(self,address):   
+    if address&((1<<10)|(1<<12)):
+      data=255 #255 = unburned EPROM
+    else:#pin 2 and 21 to ground for this program
+      key=self.key(self.pins_from_address(address))
+      data=address&255
+      parity=(countBits(data)&1)
+      if parity:
+        if key==-1:
+          data^=1<<7
+      else:
+        if key >=0 and key<=9:
+          if   key==7: data^=1<<7
+          elif key==0: data^=1<<6
+          elif key==3: data^=1<<(3 if ((data>>3^data)&1<<0) else 0)
+          elif key==8: data^=1<<(0 if ((data>>3^data)&1<<0) else 3)
+          elif key==2: data^=1<<(4 if ((data>>3^data)&1<<1) else 1)
+          elif key==9: data^=1<<(1 if ((data>>3^data)&1<<1) else 4)
+          elif key==4: data^=1<<(5 if ((data>>3^data)&1<<2) else 2)
+          elif key==6: data^=1<<(2 if ((data>>3^data)&1<<2) else 5)
+    return data
+
+  def key(self,activePins=None):
+    if not activePins: 
+      activePins=self.activePins
+    code=type(self).KeypadPins&activePins
+    if len(code)==0:
+      return -1
+    elif len(code)==2:
+      return {
+       frozenset((23,27)):1,
+       frozenset((24,27)):2,frozenset((23,26)):3,
+       frozenset((25,27)):4,frozenset((24,26)):5,frozenset((23,25)):6,
+       frozenset((26,27)):7,frozenset((25,26)):8,frozenset((24,25)):9,frozenset((23,24)):0,
+       }[frozenset(code)]
+    elif len(code)>3:
+      return 10
+    else:
+      return -2
+      
 from objc_util import *
-import ctypes
+#import ctypes
 import sceneKit as scn
 import ui
+import _ui
 import math
+import time
+import threading,queue
+import functools
+import operator
+def countup(i=0):
+  while True:
+   yield i
+   i+=1
+id=countup()
 
 def flatten(*arg):
   stack=list(reversed(arg))
@@ -48,13 +178,36 @@ class Demo:
   def main(self):
 # actually you need only to preserve those properties that are needed after the main_view.present call, 
 # in this case the self.morpher. All the other self. prefixes are not needed for the same functionality
-    self.main_view = ui.View()
-    w, h = ui.get_screen_size()
-    self.main_view.frame = (0,0,w,h)
-    self.main_view.name = 'LED Cube'
-  
-    self.scene_view = scn.View(self.main_view.frame, superView=self.main_view)
-    self.scene_view.autoresizingMask = scn.ViewAutoresizing.FlexibleHeight | scn.ViewAutoresizing.FlexibleRightMargin
+    self.q=queue.PriorityQueue()
+    self.Eprom=Eprom1()
+    self.actions={'a':lambda:self.Eprom.setPin(27),'A':lambda:self.Eprom.clearPin(27),
+                  'b':lambda:self.Eprom.setPin(26),'B':lambda:self.Eprom.clearPin(26),
+                  'c':lambda:self.Eprom.setPin(25),'C':lambda:self.Eprom.clearPin(25),
+                  'd':lambda:self.Eprom.setPin(24),'D':lambda:self.Eprom.clearPin(24),
+                  'e':lambda:self.Eprom.setPin(23),'E':lambda:self.Eprom.clearPin(23),
+    }
+    self.main_view=ui.load_view(bindings={'button_tapped':self.button_tapped, 'rbutton_tapped':self.rbutton_tapped})
+#    self.main_view = ui.View()
+#    w, h = ui.get_screen_size()
+#   self.main_view.frame = (0,0,w,h)
+#    self.main_view.name = 'LED Cube'
+    self.view1=self.main_view['view1']
+    self.textview1=self.main_view['textview1']
+    self.view2=self.main_view['view2']
+    self.rbtn1=self.main_view['rbtn1']
+    self.view3=self.main_view['view3']
+    self.view4=self.main_view['view4']
+    for sv in self.view2.subviews:
+      nb=ui.load_view_str(ui.dump_view(sv))
+      nb.x=self.view3.width-sv.height-sv.y
+      nb.y=sv.x
+      self.view3.add_subview(nb)
+    
+    self.mode=0
+    self.key=''
+#    self.scene_view = scn.View(self.main_view.frame, superView=self.main_view)
+    self.scene_view = scn.View((0,0,self.view1.frame[2],self.view1.frame[3]), superView=self.view1)
+#    self.scene_view.autoresizingMask = scn.ViewAutoresizing.FlexibleHeight | scn.ViewAutoresizing.FlexibleRightMargin
     self.scene_view.allowsCameraControl = True
     
     self.scene_view.scene = scn.Scene()
@@ -76,26 +229,26 @@ class Demo:
     n=4
     scale=0.1/n
     r=3
-#    self.off_sphere = scn.Sphere(radius=r*scale)  
-    self.off_sphere = scn.Capsule(capRadius=r*scale,height=3*r*scale) 
-    self.off_sphere.firstMaterial.contents=UIColor.lightGrayColor().CGColor()
-#    off_sphere.firstMaterial().emission().setColor_(UIColor.greenColor().CGColor())
-    self.green_sphere = scn.Capsule(capRadius=r*scale*1.1,height=3*r*scale*1.05) 
-    self.green_sphere.firstMaterial.contents=(UIColor.grayColor().CGColor())
-    self.green_sphere.firstMaterial.emission.contents=(UIColor.greenColor().CGColor())
-    self.red_sphere = scn.Capsule(capRadius=r*scale*1.1,height=3*r*scale*1.05)  
-    self.red_sphere.firstMaterial.contents=UIColor.grayColor().CGColor()
-    self.red_sphere.firstMaterial.emission.contents=(UIColor.redColor().CGColor())
-    self.sphere_nodes = [[[scn.Node.nodeWithGeometry(self.off_sphere) for k in range(n)]for j in range(n)]for i in range(n)]
+#    self.off_led = scn.Sphere(radius=r*scale)  
+    self.off_led = scn.Capsule(capRadius=r*scale,height=3*r*scale) 
+    self.off_led.firstMaterial.contents=UIColor.lightGrayColor().CGColor()
+#    off_led.firstMaterial().emission().setColor_(UIColor.greenColor().CGColor())
+    self.green_led = scn.Capsule(capRadius=r*scale*1.1,height=3*r*scale*1.05) 
+    self.green_led.firstMaterial.contents=(UIColor.grayColor().CGColor())
+    self.green_led.firstMaterial.emission.contents=(UIColor.greenColor().CGColor())
+    self.red_led = scn.Capsule(capRadius=r*scale*1.1,height=3*r*scale*1.05)  
+    self.red_led.firstMaterial.contents=UIColor.grayColor().CGColor()
+    self.red_led.firstMaterial.emission.contents=(UIColor.redColor().CGColor())
+    self.led_nodes = [[[scn.Node.nodeWithGeometry(self.off_led) for k in range(n)]for j in range(n)]for i in range(n)]
     self.off_wire = scn.Capsule(capRadius=r*0.25*scale,height=20*(n+0.5)*scale) 
     self.off_wire.firstMaterial.contents=UIColor.lightGrayColor().CGColor()
-    self.red_wire = scn.Capsule(capRadius=r*0.25*scale,height=20*(n+0.5)*scale) 
-    self.red_wire.firstMaterial.contents=UIColor.lightGrayColor().CGColor()
-    self.red_wire.firstMaterial.emission.contents=(0.7,0,0)#UIColor.magentaColor().CGColor())
-    self.blue_wire = scn.Capsule(capRadius=r*0.25*scale,height=20*(n+0.5)*scale) 
-    self.blue_wire.firstMaterial.contents=UIColor.lightGrayColor().CGColor()
-    self.blue_wire.firstMaterial.emission.contents=(0,0,0.75)#(UIColor.blueColor().CGColor())
-    self.wire_nodes=[[[scn.Node.nodeWithGeometry((self.off_wire,self.blue_wire,self.red_wire)[0]) for j in range(n)]for i in range(n)]for k in range(3)]
+    self.pos_wire = scn.Capsule(capRadius=r*0.25*scale,height=20*(n+0.5)*scale) 
+    self.pos_wire.firstMaterial.contents=UIColor.lightGrayColor().CGColor()
+    self.pos_wire.firstMaterial.emission.contents=(0.7,0,0)#UIColor.magentaColor().CGColor())
+    self.neg_wire = scn.Capsule(capRadius=r*0.25*scale,height=20*(n+0.5)*scale) 
+    self.neg_wire.firstMaterial.contents=UIColor.lightGrayColor().CGColor()
+    self.neg_wire.firstMaterial.emission.contents=(0,0,0.75)#(UIColor.blueColor().CGColor())
+    self.wire_nodes=[[[scn.Node.nodeWithGeometry((self.off_wire,self.neg_wire,self.pos_wire)[0]) for j in range(n)]for i in range(n)]for k in range(3)]
     wireoffset=r*scale
     for i in range(n):
       for j in range(n):
@@ -103,7 +256,6 @@ class Demo:
         y=(j-(n-1)/2)*20*scale
         self.root_node.addChildNode(self.wire_nodes[0][i][j])
         self.wire_nodes[0][i][j].setPosition((x+wireoffset,0,y))
-#        self.wire_nodes[0][i][j].rotateBy(math.pi/2,(0,0,1))
         self.root_node.addChildNode(self.wire_nodes[1][i][j])
         self.wire_nodes[1][i][j].setPosition((x,y-wireoffset,0))
         self.wire_nodes[1][i][j].eulerAngles=(math.pi/2,0,0)        
@@ -112,9 +264,9 @@ class Demo:
         self.wire_nodes[2][i][j].eulerAngles=(0,0,math.pi/2)        
         for k in range(n):
           z=(k-(n-1)/2)*20*scale
-          self.root_node.addChildNode(self.sphere_nodes[i][j][k])
-          self.sphere_nodes[i][j][k].setPosition((x,y,z))
-          self.sphere_nodes[i][j][k].eulerAngles=(0.61547970867039,0,math.pi/4)
+          self.root_node.addChildNode(self.led_nodes[i][j][k])
+          self.led_nodes[i][j][k].setPosition((x,y,z))
+          self.led_nodes[i][j][k].eulerAngles=(0.61547970867039,0,math.pi/4)
     self.index=0
     constraint = scn.LookAtConstraint(self.root_node)#(self.sphere_nodes[2][2][2])    
     constraint.gimbalLockEnabled = True
@@ -135,38 +287,81 @@ class Demo:
     self.main_view.present(style='fullscreen', hide_title_bar=False)
   
   def update(self, view, atTime):
-    def update_Led(index,blink_phase,red_led,green_led,off_led,pos_wire,neg_wire,off_wire):
-      index=index % 256
-      gray=index^(index>>1)
+   # self.textview1.text=f'{atTime:.3f}'
+#    print (view)
+    n_blink=3
+    tick = int(atTime*7) % (256*2*n_blink)
+    def update_Led(index, on=True,):
+      blink_phase=tick%2
+      gray=index
       iz=(2,3,1,0)[gray>>2&2|gray>>0&1]
       ix=(2,3,1,0)[gray>>3&2|gray>>1&1]
       iy=(2,3,1,0)[gray>>4&2|gray>>2&1]
       ic=gray>>7 & 1
       ib=(gray>>6 & 1) 
       ib=ib and blink_phase
-      if ib: 
-        neg_wire=off_wire
-      xwire,ywire,led=((neg_wire,pos_wire,red_led),(pos_wire,neg_wire,green_led))[ic]
-      if ib:
-        led=off_led
-      self.sphere_nodes[ix][iy][iz].setGeometry(led)
+      if on:
+        xwire,ywire,led=((self.neg_wire,self.pos_wire,self.red_led),(self.pos_wire,self.neg_wire,self.green_led))[ic]
+        if ib:
+          led=self.off_led
+          xwire=self.off_wire
+      else:
+        xwire,ywire,led=(self.off_wire,self.off_wire,self.off_led)
+      self.led_nodes[ix][iy][iz].setGeometry(led)
       self.wire_nodes[1][ix][iy].setGeometry(xwire)
       self.wire_nodes[1][ix][3-iy].setGeometry(xwire)
       self.wire_nodes[0][ix][((1,3,0,2),(2,0,3,1))[(iy+1)%2][ix]].setGeometry(xwire)   
       self.wire_nodes[2][iy][iz].setGeometry(ywire)
       self.wire_nodes[2][iy^1][iz].setGeometry(ywire)
       self.wire_nodes[0][((3,1,2,0),(0,2,1,3))[iy//2][iz]][iz].setGeometry(ywire)
+    update_Led(self.index,on=False) 
+    if self.mode==0:
+      index=(tick//(2*n_blink))%256
+      self.index=index^(index>>1)
+    elif self.mode==1:
+      self.Eprom.activePins-=self.Eprom.pins_from_address(255)
+      self.Eprom.activePins|=self.Eprom.pins_from_address(self.index)
+      self.Eprom.run()
+      self.index=self.Eprom.data_from_pins(self.Eprom.activePins)
+    update_Led(self.index) 
+    try:
+      t,i,item=self.q.get_nowait()
+      if t>atTime:
+        self.q.put((t,i,item,))
+      else:
+        try:
+          dt=next(item,None)
+          if dt:
+            self.q.put((atTime+dt,i,item,))
+        except:
+          item()
+      self.q.task_done()
+    except:
+      pass
       
-    n_blink=3
-    tick = int(atTime*7) % (256*2*n_blink)
+  def transmit(self,key):
+    text={'1':'eaAE','2':'daAD','3':'ebBE','4':'caAC','5':'dbBD','6':'ecCE',
+    '7':'baAB','8':'cbBC','9':'dcCD','0':'edDE'}[key]
+    for k,c in enumerate(text):
+#      self.textview1.text+=c
+#      print(c,end='')
+      i=ord(c)-64
+      self.view4.subviews[(i%32)-1].bg_color=((0,1,0,1,),(1,0,0,1,),)[i//32]
+      self.actions[c]()
+#      key=self.Eprom.key()
+#      print(key)  
+      yield 0.3 if k==1 else 0.1
+      
+  def rbutton_tapped(self,sender):
+    print('rbutton_tapped',sender.segments[sender.selected_index])
+    self.mode=sender.selected_index
+  def button_tapped(self,sender):
+    self.key=sender.title
+    self.q.put((0,next(id),self.transmit(self.key)))
+    self.textview1.text+=sender.title
 
-    update_Led(self.index,tick%2,self.off_sphere,self.off_sphere,self.off_sphere, self.off_wire,self.off_wire,self.off_wire) 
-    
-    self.index=tick//(2*n_blink)
-#    for wn in flatten(self.wire_nodes):
-#      wn.setGeometry(self.off_wire)
-#    for ln in flatten(self.sphere_nodes):
-#      ln.setGeometry(self.off_sphere)
-    update_Led(self.index,tick%2,self.red_sphere,self.green_sphere,self.off_sphere, self.red_wire,self.blue_wire,self.off_wire)
+D=Demo()  
+D.main()
 
-Demo.run()
+#x=[D.Eprom.data_from_address(a) for a in range(1<<15)]
+  
