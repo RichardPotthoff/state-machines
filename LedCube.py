@@ -8,7 +8,7 @@ A 4x4x4 cube of LEDs for the visual display of the state of a state machine with
   
 """
 from collections import namedtuple
-def countBits(n):
+def count_bits(n):
   n = (n & 0x5555555555555555) + ((n & 0xAAAAAAAAAAAAAAAA) >> 1)
   n = (n & 0x3333333333333333) + ((n & 0xCCCCCCCCCCCCCCCC) >> 2)
   n = (n & 0x0F0F0F0F0F0F0F0F) + ((n & 0xF0F0F0F0F0F0F0F0) >> 4)
@@ -94,7 +94,7 @@ class Eprom1(Eprom):
     else:#pin 2 and 21 to ground for this program
       key=self.key(self.pins_from_address(address))
       data=address&255
-      parity=(countBits(data)&1)
+      parity=(count_bits(data)&1)
       if parity:
         if key==-1:
           data^=1<<7
@@ -108,6 +108,8 @@ class Eprom1(Eprom):
           elif key==9: data^=1<<(1 if ((data>>3^data)&1<<1) else 4)
           elif key==4: data^=1<<(5 if ((data>>3^data)&1<<2) else 2)
           elif key==6: data^=1<<(2 if ((data>>3^data)&1<<2) else 5)
+          elif key==1: data=(intToGray((grayToInt(data&127)+1)%128))|(data&128)
+          elif key==5: data=(intToGray((grayToInt(data&127)-1)%128))|(data&128)
     return data
 
   def key(self,activePins=None):
@@ -179,6 +181,8 @@ class Demo:
 # actually you need only to preserve those properties that are needed after the main_view.present call, 
 # in this case the self.morpher. All the other self. prefixes are not needed for the same functionality
     self.q=queue.PriorityQueue()
+    self.q1=queue.PriorityQueue()
+#    ui.delay()
     self.Eprom=Eprom1()
     self.actions={'a':lambda:self.Eprom.setPin(27),'A':lambda:self.Eprom.clearPin(27),
                   'b':lambda:self.Eprom.setPin(26),'B':lambda:self.Eprom.clearPin(26),
@@ -192,15 +196,28 @@ class Demo:
 #   self.main_view.frame = (0,0,w,h)
 #    self.main_view.name = 'LED Cube'
     self.view1=self.main_view['view1']
-    self.textview1=self.main_view['textview1']
     self.view2=self.main_view['view2']
     self.rbtn1=self.main_view['rbtn1']
     self.view3=self.main_view['view3']
-    self.view4=self.main_view['view4']
-    for sv in self.view2.subviews:
+    self.view5=self.main_view['view5']
+    self.view2.hidden=True
+    w=self.view5.width//4
+    h=self.view5.height//14
+    for i in range(28):
+      self.view5.add_subview(ui.Label(
+        frame=((i//14)*(self.view5.width-w), h*(i if i<14 else 27-i)+6,w,h-2),
+        background_color='blue', 
+        name=f'pin{i+1:02d}',
+        text=self.Eprom.pins[i+1][0],
+        alignment=ui.ALIGN_CENTER))
+    self.view5.add_subview(ui.Label(frame=(w,h,w*2,h),text='27C256',alignment=ui.ALIGN_CENTER))
+    self.view5.add_subview(ui.Label(frame=(w,0,w*2,h*0.6),text='U',alignment=ui.ALIGN_CENTER))
+    for sv in self.view2.subviews: #copy, rotate, and rename numeric keys
       nb=ui.load_view_str(ui.dump_view(sv))
       nb.x=self.view3.width-sv.height-sv.y
       nb.y=sv.x
+      nb.title={'1':'+','2':'y','3':'X','4':'Z','5':'-','6':'z',
+    '7':'r/g','8':'x','9':'Y','0':'../_'}[sv.title]
       self.view3.add_subview(nb)
     
     self.mode=0
@@ -287,8 +304,6 @@ class Demo:
     self.main_view.present(style='fullscreen', hide_title_bar=False)
   
   def update(self, view, atTime):
-   # self.textview1.text=f'{atTime:.3f}'
-#    print (view)
     n_blink=3
     tick = int(atTime*7) % (256*2*n_blink)
     def update_Led(index, on=True,):
@@ -314,16 +329,26 @@ class Demo:
       self.wire_nodes[2][iy][iz].setGeometry(ywire)
       self.wire_nodes[2][iy^1][iz].setGeometry(ywire)
       self.wire_nodes[0][((3,1,2,0),(0,2,1,3))[iy//2][iz]][iz].setGeometry(ywire)
+      return #update_Led()
     update_Led(self.index,on=False) 
+    self.Eprom.activePins-=self.Eprom.pins_from_address(255)
+    self.Eprom.activePins|=self.Eprom.pins_from_address(self.index)
     if self.mode==0:
       index=(tick//(2*n_blink))%256
       self.index=index^(index>>1)
+      self.Eprom.activePins-=self.Eprom.pins_from_data(255)
+      self.Eprom.activePins|=self.Eprom.pins_from_data(self.index)
     elif self.mode==1:
-      self.Eprom.activePins-=self.Eprom.pins_from_address(255)
-      self.Eprom.activePins|=self.Eprom.pins_from_address(self.index)
       self.Eprom.run()
       self.index=self.Eprom.data_from_pins(self.Eprom.activePins)
     update_Led(self.index) 
+    def update_view5():
+      for i in type(self.Eprom).inputpins|type(self.Eprom).outputpins:
+        cl=((0.,1.,0.,1.,),(1.,0.,0.,1.,),)[i in self.Eprom.activePins]
+        sv=self.view5[f'pin{i:02d}']
+        sv.background_color=cl #program hangs at exit with this line
+    ui.in_background(update_view5)()#running it in the background works
+    # self.view5.subviews[i-1].background_color=((0,1,0,1,),(1,0,0,1,),)[i in self.Eprom.activePins]
     try:
       t,i,item=self.q.get_nowait()
       if t>atTime:
@@ -341,27 +366,23 @@ class Demo:
       
   def transmit(self,key):
     text={'1':'eaAE','2':'daAD','3':'ebBE','4':'caAC','5':'dbBD','6':'ecCE',
-    '7':'baAB','8':'cbBC','9':'dcCD','0':'edDE'}[key]
+    '7':'baAB','8':'cbBC','9':'dcCD','0':'edDE',
+    '+':'eaAE','y':'daAD','X':'ebBE','Z':'caAC','-':'dbBD','z':'ecCE',
+    'r/g':'baAB','x':'cbBC','Y':'dcCD','../_':'edDE'}[key]
     for k,c in enumerate(text):
-#      self.textview1.text+=c
-#      print(c,end='')
       i=ord(c)-64
-      self.view4.subviews[(i%32)-1].bg_color=((0,1,0,1,),(1,0,0,1,),)[i//32]
       self.actions[c]()
-#      key=self.Eprom.key()
-#      print(key)  
       yield 0.3 if k==1 else 0.1
       
   def rbutton_tapped(self,sender):
-    print('rbutton_tapped',sender.segments[sender.selected_index])
     self.mode=sender.selected_index
   def button_tapped(self,sender):
     self.key=sender.title
     self.q.put((0,next(id),self.transmit(self.key)))
-    self.textview1.text+=sender.title
 
-D=Demo()  
-D.main()
-
-#x=[D.Eprom.data_from_address(a) for a in range(1<<15)]
+if __name__=='__main__':
+  D=Demo()  
+  D.main()
+  
+#x=[D.Eprom.data_from_address(a^255)^255 for a in range(1<<15)] #inverted data
   
