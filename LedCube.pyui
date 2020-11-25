@@ -29,7 +29,7 @@
           "name" : "view1",
           "uuid" : "667A61D9-5FA3-4D9E-A660-4F5FB0439293"
         },
-        "selected" : true
+        "selected" : false
       },
       {
         "nodes" : [
@@ -319,16 +319,53 @@
           "font_size" : 32
         },
         "selected" : false
+      },
+      {
+        "nodes" : [
+
+        ],
+        "frame" : "{{205, 459}, {51, 31}}",
+        "class" : "Switch",
+        "attributes" : {
+          "flex" : "RT",
+          "action" : "setPin",
+          "frame" : "{{487, 369}, {51, 31}}",
+          "custom_attributes" : "{'targetPin':2}",
+          "class" : "Switch",
+          "value" : false,
+          "uuid" : "BCA10B90-CA31-414C-9A16-D7C0E274B411",
+          "name" : "switch1"
+        },
+        "selected" : true
+      },
+      {
+        "nodes" : [
+
+        ],
+        "frame" : "{{165, 459}, {41, 32}}",
+        "class" : "Label",
+        "attributes" : {
+          "flex" : "RT",
+          "font_size" : 18,
+          "frame" : "{{437, 368}, {150, 32}}",
+          "uuid" : "D7413DCA-32FC-4477-BDDE-F9A8392F3152",
+          "class" : "Label",
+          "alignment" : "right",
+          "text" : "A12",
+          "name" : "label1",
+          "font_name" : "<System>"
+        },
+        "selected" : false
       }
     ],
     "frame" : "{{0, 0}, {1024, 768}}",
     "class" : "View",
     "attributes" : {
-      "name" : "LED Cube",
-      "enabled" : true,
-      "tint_color" : "RGBA(0.000000,0.478000,1.000000,1.000000)",
       "border_color" : "RGBA(0.000000,0.000000,0.000000,1.000000)",
+      "enabled" : true,
       "background_color" : "RGBA(1.000000,1.000000,1.000000,1.000000)",
+      "tint_color" : "RGBA(0.000000,0.478000,1.000000,1.000000)",
+      "name" : "LED Cube",
       "flex" : ""
     },
     "selected" : false

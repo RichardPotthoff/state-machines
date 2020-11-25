@@ -110,15 +110,19 @@ class Eprom1(Eprom):
     self.activePins|=self.pins_from_data(self.data_from_address(self.address_from_pins(self.activePins)))
     
   def data_from_address(self,address):   
-    if address&((1<<10)|(1<<12)):
-      data=0 # data will be inverted -> data^255 = 255 (empty ROM)
-    else:#pin 2 and 21 to ground for this program
+    mode=2*((address>>12)&1)+((address>>10)&1)
+    if mode in (0,2):
       key=self.key(self.pins_from_address(address))
       data=address&255
       parity=(count_bits(data)&1)==0
       if not parity and key==-6:
           data^=1<<7 #key released -> flip msb to make parity even
       elif parity:
+        olddata=data
+        if mode==2:
+            cyclelength=1<<(max(0,(olddata&127).bit_length()-1))
+        else:
+           cyclelength=128
         if key >=0 and key<=9:
           if   key==7: data^=1<<7
           elif key==0: data^=1<<6
@@ -128,10 +132,15 @@ class Eprom1(Eprom):
           elif key==9: data^=1<<(1 if ((data>>3^data)&1<<1) else 4)
           elif key==4: data^=1<<(5 if ((data>>3^data)&1<<2) else 2)
           elif key==6: data^=1<<(2 if ((data>>3^data)&1<<2) else 5)
-          elif key==1: data=(intToGray((grayToInt(data&127)+1)%128))|(data&128)
-          elif key==5: data=(intToGray((grayToInt(data&127)-1)%128))|(data&128)
+          elif key==1: data=(intToGray((grayToInt(data&(cyclelength-1))+1)%cyclelength))|(data&128)
+          elif key==5: data=(intToGray((grayToInt(data&(cyclelength-1))-1)%cyclelength))|(data&128)
+        if mode==2:
+          bitmask=(cyclelength-1)|64
+          data=(data&bitmask)|(olddata&(bitmask^255))
       else:
-          if key==22: data=128
+          if key==22: data=128 #reset if '+' and '-' are pressed simultaneously
+    else:
+      data=0 # data will be inverted -> data^255 = 255 (empty ROM)
     return data
 
   def key(self,activePins=None):
@@ -199,7 +208,7 @@ class Demo:
                   'd':lambda:self.Eprom.setPin(24),'D':lambda:self.Eprom.clearPin(24),
                   'e':lambda:self.Eprom.setPin(23),'E':lambda:self.Eprom.clearPin(23),
     }
-    self.main_view=ui.load_view(bindings={'button_tapped':self.button_tapped, 'rbutton_tapped':self.rbutton_tapped,'quit':self.quit})
+    self.main_view=ui.load_view(bindings={'button_tapped':self.button_tapped, 'rbutton_tapped':self.rbutton_tapped,'quit':self.quit,'setPin':self.setPin})
 #    self.main_view = ui.View()
 #    w, h = ui.get_screen_size()
 #   self.main_view.frame = (0,0,w,h)
@@ -402,7 +411,11 @@ class Demo:
   def button_tapped(self,sender):
     self.key=sender.title
     self.q.put((0,next(id),self.transmit(self.key)))
-
+  def setPin(self,sender):
+    if sender.value:
+      self.Eprom.setPin(sender.targetPin)
+    else:
+      self.Eprom.clearPin(sender.targetPin)
 if __name__=='__main__':
   D=Demo()  
   D.main()
