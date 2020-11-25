@@ -68,7 +68,28 @@ class Eprom(IC):
         }
   outputpins=datapins=frozenset(key for key,value in pins.items() if value.output)
   inputpins=addresspins=frozenset(key for key,value in pins.items() if value.input)
-    
+  keypadLookupTable={
+       frozenset(()):-6,
+       frozenset((27,)):-1,
+       frozenset((26,)):-2,
+       frozenset((25,)):-3,
+       frozenset((24,)):-4,
+       frozenset((23,)):-5,
+       frozenset((23,27)):1,
+       frozenset((24,27)):2,frozenset((23,26)):3,
+       frozenset((25,27)):4,frozenset((24,26)):5,frozenset((23,25)):6,
+       frozenset((26,27)):7,frozenset((25,26)):8,frozenset((24,25)):9,frozenset((23,24)):0,
+       frozenset((24,25,26)):11,
+       frozenset((23,25,26)):12,frozenset((24,25,27)):13,
+       frozenset((23,24,26)):14,frozenset((23,25,27)):15,frozenset((24,26,27)):16,
+       frozenset((23,24,25)):17,frozenset((23,24,27)):18,frozenset((23,26,27)):19,frozenset((25,26,27)):10,
+       frozenset((24,25,26,27)):24,
+       frozenset((23,25,26,27)):23,
+       frozenset((23,24,26,27)):22,
+       frozenset((23,24,25,27)):21,
+       frozenset((23,24,25,26)):20,
+       frozenset((23,24,25,26,27)):25,
+       }  
   def __init__(self):
     super().__init__()
   def setPin(self,pin):
@@ -94,11 +115,10 @@ class Eprom1(Eprom):
     else:#pin 2 and 21 to ground for this program
       key=self.key(self.pins_from_address(address))
       data=address&255
-      parity=(count_bits(data)&1)
-      if parity:
-        if key==-1:
-          data^=1<<7
-      else:
+      parity=(count_bits(data)&1)==0
+      if not parity and key==-6:
+          data^=1<<7 #key released -> flip msb to make parity even
+      elif parity:
         if key >=0 and key<=9:
           if   key==7: data^=1<<7
           elif key==0: data^=1<<6
@@ -110,26 +130,15 @@ class Eprom1(Eprom):
           elif key==6: data^=1<<(2 if ((data>>3^data)&1<<2) else 5)
           elif key==1: data=(intToGray((grayToInt(data&127)+1)%128))|(data&128)
           elif key==5: data=(intToGray((grayToInt(data&127)-1)%128))|(data&128)
+      else:
+          if key==22: data=128
     return data
 
   def key(self,activePins=None):
-    if not activePins: 
+    if activePins==None: 
       activePins=self.activePins
-    code=type(self).KeypadPins&activePins
-    if len(code)==0:
-      return -1
-    elif len(code)==2:
-      return {
-       frozenset((23,27)):1,
-       frozenset((24,27)):2,frozenset((23,26)):3,
-       frozenset((25,27)):4,frozenset((24,26)):5,frozenset((23,25)):6,
-       frozenset((26,27)):7,frozenset((25,26)):8,frozenset((24,25)):9,frozenset((23,24)):0,
-       }[frozenset(code)]
-    elif len(code)>3:
-      return 10
-    else:
-      return -2
-      
+    return self.keypadLookupTable[type(self).KeypadPins&activePins]
+    
 from objc_util import *
 #import ctypes
 import sceneKit as scn
