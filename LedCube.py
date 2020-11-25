@@ -90,7 +90,7 @@ class Eprom1(Eprom):
     
   def data_from_address(self,address):   
     if address&((1<<10)|(1<<12)):
-      data=255 #255 = unburned EPROM
+      data=0 # data will be inverted -> data^255 = 255 (empty ROM)
     else:#pin 2 and 21 to ground for this program
       key=self.key(self.pins_from_address(address))
       data=address&255
@@ -190,7 +190,7 @@ class Demo:
                   'd':lambda:self.Eprom.setPin(24),'D':lambda:self.Eprom.clearPin(24),
                   'e':lambda:self.Eprom.setPin(23),'E':lambda:self.Eprom.clearPin(23),
     }
-    self.main_view=ui.load_view(bindings={'button_tapped':self.button_tapped, 'rbutton_tapped':self.rbutton_tapped})
+    self.main_view=ui.load_view(bindings={'button_tapped':self.button_tapped, 'rbutton_tapped':self.rbutton_tapped,'quit':self.quit})
 #    self.main_view = ui.View()
 #    w, h = ui.get_screen_size()
 #   self.main_view.frame = (0,0,w,h)
@@ -201,6 +201,7 @@ class Demo:
     self.view3=self.main_view['view3']
     self.view5=self.main_view['view5']
     self.view2.hidden=True
+    self.view3.hidden=True
     w=self.view5.width//4
     h=self.view5.height//14
     for i in range(28):
@@ -301,8 +302,11 @@ class Demo:
     self.action = scn.Action.repeatActionForever(scn.Action.rotateBy(0, math.pi*2, 0, 10))
     self.origin_node.runAction(self.action)  
     
-    self.main_view.present(style='fullscreen', hide_title_bar=False)
-  
+    self.main_view.present(style='fullscreen', hide_title_bar=True)
+    
+  def quit(self,sender):
+    self.main_view.close()
+    
   def update(self, view, atTime):
     n_blink=3
     tick = int(atTime*7) % (256*2*n_blink)
@@ -338,7 +342,7 @@ class Demo:
       self.index=index^(index>>1)
       self.Eprom.activePins-=self.Eprom.pins_from_data(255)
       self.Eprom.activePins|=self.Eprom.pins_from_data(self.index)
-    elif self.mode==1:
+    elif self.mode>=1:
       self.Eprom.run()
       self.index=self.Eprom.data_from_pins(self.Eprom.activePins)
     update_Led(self.index) 
@@ -376,6 +380,16 @@ class Demo:
       
   def rbutton_tapped(self,sender):
     self.mode=sender.selected_index
+    if self.mode==0:
+      self.view2.hidden=True
+      self.view3.hidden=True
+    elif self.mode==1:
+      self.view2.hidden=True
+      self.view3.hidden=False
+    elif self.mode==2:
+      self.view2.hidden=False
+      self.view3.hidden=True
+
   def button_tapped(self,sender):
     self.key=sender.title
     self.q.put((0,next(id),self.transmit(self.key)))
@@ -385,4 +399,4 @@ if __name__=='__main__':
   D.main()
   
 #x=[D.Eprom.data_from_address(a^255)^255 for a in range(1<<15)] #inverted data
-  
+#with open('LedCube.bin','wb') as f: f.write(bytes(x))
