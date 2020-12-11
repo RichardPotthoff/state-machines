@@ -92,11 +92,15 @@ class Eprom(IC):
        }  
   def __init__(self):
     super().__init__()
-  def setPin(self,pin):
-    self.activePins.add(pin)
+  def setPin(self,pin,value=1):
+    if value:
+      self.activePins.add(pin)
+    else:
+      self.activePins.discard(pin)
 #    print(self.activePins)
   def clearPin(self,pin):
-    self.activePins.discard(pin)
+    self.setPin(pin,0)
+#    self.activePins.discard(pin)
 #    print(self.activePins)
   def pinStatus(self,pin):
     return pin in self.activePins
@@ -205,7 +209,7 @@ class keyNode(scene.ShapeNode):
       self.label.text=title
       
 class keypadNode(scene.ShapeNode):
-    def __init__(self, radius=150, fill_color='white', stroke_color='black',keytitles=None, stroke_width=3,   on_output_change=None,*args, **kwargs):
+    def __init__(self, radius=150, fill_color='white', stroke_color='black',keytitles=None, stroke_width=3,   on_output_change=None,orientation=((1,0),(0,1)),*args, **kwargs):
       path=ui.Path.oval(0,0,2*radius,2*radius)
       if not stroke_width:
         stroke_width=radius*0.1
@@ -213,7 +217,12 @@ class keypadNode(scene.ShapeNode):
       super().__init__(path=path,fill_color=fill_color,stroke_color=stroke_color,*args,**kwargs)
       if not keytitles:
         keytitles=[f'{i}' for i in range(10)]
-      self.keys=[keyNode(position=((2-i)*60,(i/2-j)*70),title=keytitles[id],id=id,parent=self)for i in range(4) for j in range(i+1) for id in ((i*(i+1)//2+j)%10,)]
+      self.keys=[keyNode(
+          position=(x*orientation[0][0]+y*orientation[0][1],x*orientation[1][0]+y*orientation[1][1]),
+          title=keytitles[id],
+          id=id,
+          parent=self)
+        for i in range(4) for j in range(i+1) for id,x,y in (((i*(i+1)//2+j)%10,(2-i)*60,(i/2-j)*70),)]
       self.on_output_change=on_output_change
       self.output=[0]*5
       self.keyid_to_output=[
@@ -227,30 +236,24 @@ class keypadNode(scene.ShapeNode):
         if (self.output[i]==0) and (inc==-1):
           if self.on_output_change:
             self.on_output_change(i,0)
-#          print(f'output {i}: 1 > 0')
         if (self.output[i]==1) and (inc==1):
           if self.on_output_change:
             self.on_output_change(i,1)
-#          print(f'output {i}: 0 > 1')
     def touch_began(self, touch):
         for node in self.children:
           if self.point_from_scene(touch.location) in node.frame:
-            print(f'touch_began {node.id+1}') 
             self.update_output(node.id,+1)
     def touch_moved(self, touch):
         for node in self.children:
           is_inside=self.point_from_scene(touch.location) in node.frame
           was_inside=self.point_from_scene(touch.prev_location) in node.frame
           if is_inside and not was_inside:
-            print(f'touch_moved {node.id+1} <') 
             self.update_output(node.id,+1)
           elif was_inside and not is_inside:
-            print(f'touch_moved {node.id+1} >') 
             self.update_output(node.id,-1)
     def touch_ended(self, touch):
         for node in self.children:
           if self.point_from_scene(touch.location) in node.frame:
-            print(f'touch_ended {node.id+1}') 
             self.update_output(node.id,-1)
 
 class MyScene(scene.Scene):
@@ -323,15 +326,7 @@ class Demo:
 # in this case the self.morpher. All the other self. prefixes are not needed for the same functionality
     self.q=queue.PriorityQueue()
     self.q1=queue.PriorityQueue()
-#    ui.delay()
     self.Eprom=Eprom1()
-    self.actions={'a':lambda:self.Eprom.setPin(27),'A':lambda:self.Eprom.clearPin(27),
-                  'b':lambda:self.Eprom.setPin(26),'B':lambda:self.Eprom.clearPin(26),
-                  'c':lambda:self.Eprom.setPin(25),'C':lambda:self.Eprom.clearPin(25),
-                  'd':lambda:self.Eprom.setPin(24),'D':lambda:self.Eprom.clearPin(24),
-                  'e':lambda:self.Eprom.setPin(23),'E':lambda:self.Eprom.clearPin(23),
-    }
-    self.main_view=ui.load_view(bindings={'button_tapped':self.button_tapped})
     self.sv=scene.SceneView()
     self.sv.scene=MyScene()
     self.sv.anti_alias = False
@@ -340,39 +335,25 @@ class Demo:
     self.sv.shows_fps = True
     self.sv.bg_color=(1,1,1,1)
     self.view1=ui.View(frame=(256,0,768,750))
-    self.view2=self.main_view['view2']
     self.rbtn1=ui.SegmentedControl(frame=(30.0,417.0,204.0,34.0),segments=('auto', 'xyz','123'),action= self.rbutton_tapped)
     self.switch1=ui.Switch(frame=(6.0,87.0,51.0,31.0),action=self.setPin)
     self.switch1.targetPin=2
     self.switch2=ui.Switch(frame=(197,218,51.0,31.0),action=self.setPin)
     self.switch2.targetPin=21
-    self.view3=self.main_view['view3']
-    self.view3.y=482
-    self.view2.y=482
     self.sv.add_subview(self.view1)
-    self.sv.add_subview(self.view2)
-    self.sv.add_subview(self.view3)
     self.sv.add_subview(self.rbtn1)
     self.sv.add_subview(self.switch1)
     self.sv.scene.view.add_subview(self.switch2)
-    self.keypad=keypadNode(position=(100,150),
-      keytitles=['inc','y','X','Z','dec','z','r/g','x','Y','../_'],on_output_change=self.keypad_output_changed)
-    
-    self.view2.hidden=True
-    self.view3.hidden=True
-    for sv in self.view2.subviews: #copy, rotate, and rename numeric keys
-      nb=ui.load_view_str(ui.dump_view(sv))
-      nb.x=self.view3.width-sv.height-sv.y
-      nb.y=sv.x
-      nb.title={'1':'+','2':'y','3':'X','4':'Z','5':'-','6':'z',
-    '7':'r/g','8':'x','9':'Y','0':'../_'}[sv.title]
-      self.view3.add_subview(nb)
-    
+    self.keypad1=keypadNode(position=(100,150),
+      keytitles=['inc','y','X','Z','dec','z','r/g','x','Y','../_'], on_output_change=self.keypad_output_changed)
+    self.keypad2=keypadNode(position=(128,128),
+      keytitles=['1','2','3','4','5','6','7','8','9','0'],
+      orientation=((0,-1),(1,0),),
+      on_output_change=self.keypad_output_changed)
+ 
     self.mode=0
     self.key=''
-#    self.scene_view = scn.View(self.main_view.frame, superView=self.main_view)
     self.scene_view = scn.View((0,0,self.view1.frame[2],self.view1.frame[3]), superView=self.view1)
-#    self.scene_view.autoresizingMask = scn.ViewAutoresizing.FlexibleHeight | scn.ViewAutoresizing.FlexibleRightMargin
     self.scene_view.allowsCameraControl = True
     
     self.scene_view.scene = scn.Scene()
@@ -450,9 +431,10 @@ class Demo:
     self.origin_node.runAction(self.action)  
     
     self.sv.present(orientations= ['landscape'])
+    
   def keypad_output_changed(self,i,value):
-    self.q.put((0,next(id),self.actions[['ABCDE','abcde'][value][i]]))
-    print(f'keypad_output_changed({i}, {value})')
+    self.q.put((0,next(id),(lambda pin,value:lambda:self.Eprom.setPin(pin,value))(27-i,value)))
+    
   def update(self, view, atTime):
     n_blink=3
     tick = int(atTime*7) % (256*2*n_blink)
@@ -508,38 +490,26 @@ class Demo:
       self.q.task_done()
     except:
       pass
-      
-  def transmit(self,key):
-    text={'1':'eaAE','2':'daAD','3':'ebBE','4':'caAC','5':'dbBD','6':'ecCE',
-    '7':'baAB','8':'cbBC','9':'dcCD','0':'edDE',
-    '+':'eaAE','y':'daAD','X':'ebBE','Z':'caAC','-':'dbBD','z':'ecCE',
-    'r/g':'baAB','x':'cbBC','Y':'dcCD','../_':'edDE'}[key]
-    for k,c in enumerate(text):
-      i=ord(c)-64
-      self.actions[c]()
-      yield 0.3 if k==1 else 0.1
-      
+            
   def rbutton_tapped(self,sender):
     self.mode=sender.selected_index
     if self.mode==0:
-      self.view2.hidden=True
-      self.keypad.remove_from_parent()
+      self.keypad2.remove_from_parent()
+      self.keypad1.remove_from_parent()
     elif self.mode==1:
-      self.view2.hidden=True
-      self.sv.scene.add_child(self.keypad)
+      self.keypad2.remove_from_parent()
+      self.sv.scene.add_child(self.keypad1)
     elif self.mode==2:
-      self.view2.hidden=False
-      self.keypad.remove_from_parent()
+      self.sv.scene.add_child(self.keypad2)
+      self.keypad1.remove_from_parent()
 
-  def button_tapped(self,sender):
-    self.key=sender.title
-    self.q.put((0,next(id),self.transmit(self.key)))
     
   def setPin(self,sender):
     if sender.value:
       self.Eprom.setPin(sender.targetPin)
     else:
       self.Eprom.clearPin(sender.targetPin)
+      
 if __name__=='__main__':
   D=Demo()  
   D.main()
