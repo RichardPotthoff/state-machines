@@ -8,26 +8,11 @@
         "frame" : "{{0, 482}, {256, 256}}",
         "class" : "View",
         "attributes" : {
-          "flex" : "RT",
+          "flex" : "RB",
           "frame" : "{{462, 334}, {100, 100}}",
           "class" : "View",
           "name" : "view3",
           "uuid" : "93159941-AB6A-4827-B022-ECA7902BC802"
-        },
-        "selected" : false
-      },
-      {
-        "nodes" : [
-
-        ],
-        "frame" : "{{256, 0}, {768, 768}}",
-        "class" : "View",
-        "attributes" : {
-          "flex" : "WHL",
-          "frame" : "{{462, 334}, {100, 100}}",
-          "class" : "View",
-          "name" : "view1",
-          "uuid" : "667A61D9-5FA3-4D9E-A660-4F5FB0439293"
         },
         "selected" : false
       },
@@ -257,48 +242,13 @@
         "frame" : "{{0, 482}, {256, 256}}",
         "class" : "View",
         "attributes" : {
-          "flex" : "RT",
+          "flex" : "RB",
           "border_width" : 0,
           "frame" : "{{462, 334}, {100, 100}}",
           "class" : "View",
           "corner_radius" : 0,
           "uuid" : "E25968AB-954F-4173-8098-36ADD5C5D000",
           "name" : "view2"
-        },
-        "selected" : false
-      },
-      {
-        "nodes" : [
-
-        ],
-        "frame" : "{{30, 417}, {204, 34}}",
-        "class" : "SegmentedControl",
-        "attributes" : {
-          "action" : "rbutton_tapped",
-          "flex" : "RT",
-          "segments" : "auto|xyz|123",
-          "frame" : "{{452, 370}, {120, 29}}",
-          "uuid" : "A56A7146-74A7-4494-B656-368E99945B28",
-          "class" : "SegmentedControl",
-          "name" : "rbtn1"
-        },
-        "selected" : false
-      },
-      {
-        "nodes" : [
-
-        ],
-        "frame" : "{{61, 61}, {145, 320}}",
-        "class" : "View",
-        "attributes" : {
-          "flex" : "RB",
-          "border_width" : 2,
-          "frame" : "{{462, 334}, {100, 100}}",
-          "border_color" : "RGBA(0.000000,0.000000,0.000000,1.000000)",
-          "class" : "View",
-          "uuid" : "B03DA4B9-FDC4-42FE-B1C5-825AECAE6049",
-          "corner_radius" : 0,
-          "name" : "view5"
         },
         "selected" : false
       },
@@ -319,43 +269,6 @@
           "font_size" : 32
         },
         "selected" : false
-      },
-      {
-        "nodes" : [
-
-        ],
-        "frame" : "{{205, 459}, {51, 31}}",
-        "class" : "Switch",
-        "attributes" : {
-          "flex" : "RT",
-          "action" : "setPin",
-          "frame" : "{{487, 369}, {51, 31}}",
-          "custom_attributes" : "{'targetPin':2}",
-          "class" : "Switch",
-          "value" : false,
-          "uuid" : "BCA10B90-CA31-414C-9A16-D7C0E274B411",
-          "name" : "switch1"
-        },
-        "selected" : true
-      },
-      {
-        "nodes" : [
-
-        ],
-        "frame" : "{{165, 459}, {41, 32}}",
-        "class" : "Label",
-        "attributes" : {
-          "flex" : "RT",
-          "font_size" : 18,
-          "frame" : "{{437, 368}, {150, 32}}",
-          "uuid" : "D7413DCA-32FC-4477-BDDE-F9A8392F3152",
-          "class" : "Label",
-          "alignment" : "right",
-          "text" : "A12",
-          "name" : "label1",
-          "font_name" : "<System>"
-        },
-        "selected" : false
       }
     ],
     "frame" : "{{0, 0}, {1024, 768}}",
@@ -364,8 +277,8 @@
       "border_color" : "RGBA(0.000000,0.000000,0.000000,1.000000)",
       "enabled" : true,
       "background_color" : "RGBA(1.000000,1.000000,1.000000,1.000000)",
-      "tint_color" : "RGBA(0.000000,0.478000,1.000000,1.000000)",
       "name" : "LED Cube",
+      "tint_color" : "RGBA(0.000000,0.478000,1.000000,1.000000)",
       "flex" : ""
     },
     "selected" : false

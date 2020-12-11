@@ -23,8 +23,8 @@ pinspec.__new__.__defaults__=('',0,0)
 class Component(object):
   def __init__(self):
     self.activePins=set()
-class Node(Component):
-  pass
+#class Node(Component):
+#  pass
 class IC(Component):
   pins={}
   outputpins=frozenset(key for key,value in pins.items() if value.output)
@@ -135,10 +135,14 @@ class Eprom1(Eprom):
           elif key==1: data=(intToGray((grayToInt(data&(cyclelength-1))+1)%cyclelength))|(data&128)
           elif key==5: data=(intToGray((grayToInt(data&(cyclelength-1))-1)%cyclelength))|(data&128)
         if mode==2:
-          bitmask=(cyclelength-1)|64
+          bitmask=(cyclelength-1)|64|128
           data=(data&bitmask)|(olddata&(bitmask^255))
       else:
-          if key==22: data=128 #reset if '+' and '-' are pressed simultaneously
+          if key==22:
+            if mode==2:
+              data=64
+            else:
+              data=128  #reset if '+' and '-' are pressed simultaneously
     else:
       data=0 # data will be inverted -> data^255 = 255 (empty ROM)
     return data
@@ -151,6 +155,7 @@ class Eprom1(Eprom):
 from objc_util import *
 #import ctypes
 import sceneKit as scn
+import scene
 import ui
 import _ui
 import math
@@ -158,6 +163,124 @@ import time
 import threading,queue
 import functools
 import operator
+import scene
+class ICNode(scene.SpriteNode):
+  def __init__(self,pins=None,*args,**kwargs):
+    self.pins=pins
+    super().__init__(*args,**kwargs)
+    if pins:
+      n=len(pins)
+      n2=n//2
+      w=self.size[0]//4
+      h=self.size[1]//n2
+      self.pinnodes=[scene.SpriteNode(
+          position=((i//n2)*(self.size[0]-w),h*(n2-1-i if i<n2 else i-n2)+6),
+          size=(w,h-2),
+          anchor_point=(0,0),
+          color='blue', 
+          parent=self)
+          for i in range(n)]
+      for i,pn in enumerate(self.pinnodes):
+        scene.LabelNode(text=Eprom.pins[i+1][0], position=pn.size/2,font=('Helvetica', 15), color='black',anchor_point=(0.5,0.5),parent=pn)
+      self.updatePins(set())
+  def updatePins(self,ActivePins):
+    for i in Eprom.inputpins|Eprom.outputpins:
+        self.pinnodes[i-1].color=((0.,1.,0.,1.,),(1.,0.,0.,1.,),)[i in ActivePins]
+
+      
+class keyNode(scene.ShapeNode):
+    def __init__(self,radius=25,fill_color='white',stroke_color='black',title=None,stroke_width=None,id=None,*args,**kwargs):
+      path=ui.Path.oval(0,0,2*radius,2*radius)
+      if not stroke_width:
+        stroke_width=radius*0.1
+      path.line_width=stroke_width
+      super().__init__(path=path,fill_color=fill_color,stroke_color=stroke_color,*args,**kwargs)
+      self.label=scene.LabelNode(position=(0,0), anchor_point=(0.5,0.5), text=title,font=('Helvetica',radius),parent=self,color=stroke_color)
+      self.id=id
+    @property
+    def title(self):
+      return self.label.text
+    @title.setter
+    def title(self,title):
+      self.label.text=title
+      
+class keypadNode(scene.ShapeNode):
+    def __init__(self, radius=150, fill_color='white', stroke_color='black',keytitles=None, stroke_width=3,   on_output_change=None,*args, **kwargs):
+      path=ui.Path.oval(0,0,2*radius,2*radius)
+      if not stroke_width:
+        stroke_width=radius*0.1
+      path.line_width=stroke_width
+      super().__init__(path=path,fill_color=fill_color,stroke_color=stroke_color,*args,**kwargs)
+      if not keytitles:
+        keytitles=[f'{i}' for i in range(10)]
+      self.keys=[keyNode(position=((2-i)*60,(i/2-j)*70),title=keytitles[id],id=id,parent=self)for i in range(4) for j in range(i+1) for id in ((i*(i+1)//2+j)%10,)]
+      self.on_output_change=on_output_change
+      self.output=[0]*5
+      self.keyid_to_output=[
+                 (0,4),
+              (0,3),(1,4),
+           (0,2),(1,3),(2,4),
+        (0,1),(1,2),(2,3),(3,4)]
+    def update_output(self,id,inc):
+      for i in self.keyid_to_output[id]:
+        self.output[i]+=inc
+        if (self.output[i]==0) and (inc==-1):
+          if self.on_output_change:
+            self.on_output_change(i,0)
+#          print(f'output {i}: 1 > 0')
+        if (self.output[i]==1) and (inc==1):
+          if self.on_output_change:
+            self.on_output_change(i,1)
+#          print(f'output {i}: 0 > 1')
+    def touch_began(self, touch):
+        for node in self.children:
+          if self.point_from_scene(touch.location) in node.frame:
+            print(f'touch_began {node.id+1}') 
+            self.update_output(node.id,+1)
+    def touch_moved(self, touch):
+        for node in self.children:
+          is_inside=self.point_from_scene(touch.location) in node.frame
+          was_inside=self.point_from_scene(touch.prev_location) in node.frame
+          if is_inside and not was_inside:
+            print(f'touch_moved {node.id+1} <') 
+            self.update_output(node.id,+1)
+          elif was_inside and not is_inside:
+            print(f'touch_moved {node.id+1} >') 
+            self.update_output(node.id,-1)
+    def touch_ended(self, touch):
+        for node in self.children:
+          if self.point_from_scene(touch.location) in node.frame:
+            print(f'touch_ended {node.id+1}') 
+            self.update_output(node.id,-1)
+
+class MyScene(scene.Scene):
+    def setup(self):
+            self.did_change_size()
+            self.framecount=0
+            self.background_color='white'
+            self.Eprom= ICNode(pins=Eprom.pins, position=(54,385), size=(145,320), anchor_point=(0,0), color='white', parent=self)     
+    def touch_began(self,touch): 
+       for node in self.children:
+            if hasattr(node, 'touch_began'):
+                if touch.location in node.frame:
+                    node.touch_began(touch)
+#       print(f'began {touch.location},{touch.touch_id}')
+    def touch_moved(self,touch):
+       for node in self.children:
+            if hasattr(node, 'touch_moved'):
+                if touch.location in node.frame:
+                    node.touch_moved(touch)
+
+#       print(f'moved {touch.location},{touch.touch_id}')
+    def touch_ended(self,touch): 
+       for node in self.children:
+            if hasattr(node, 'touch_ended'):
+                if touch.location in node.frame:
+                    node.touch_ended(touch)
+#       print(f'ended {touch.location},{touch.touch_id}')
+    def update(self):
+      self.framecount+=1
+
 def countup(i=0):
   while True:
    yield i
@@ -208,29 +331,35 @@ class Demo:
                   'd':lambda:self.Eprom.setPin(24),'D':lambda:self.Eprom.clearPin(24),
                   'e':lambda:self.Eprom.setPin(23),'E':lambda:self.Eprom.clearPin(23),
     }
-    self.main_view=ui.load_view(bindings={'button_tapped':self.button_tapped, 'rbutton_tapped':self.rbutton_tapped,'quit':self.quit,'setPin':self.setPin})
-#    self.main_view = ui.View()
-#    w, h = ui.get_screen_size()
-#   self.main_view.frame = (0,0,w,h)
-#    self.main_view.name = 'LED Cube'
-    self.view1=self.main_view['view1']
+    self.main_view=ui.load_view(bindings={'button_tapped':self.button_tapped})
+    self.sv=scene.SceneView()
+    self.sv.scene=MyScene()
+    self.sv.anti_alias = False
+    self.sv.frame_interval = 1
+    self.sv.multi_touch_enabled = True
+    self.sv.shows_fps = True
+    self.sv.bg_color=(1,1,1,1)
+    self.view1=ui.View(frame=(256,0,768,750))
     self.view2=self.main_view['view2']
-    self.rbtn1=self.main_view['rbtn1']
+    self.rbtn1=ui.SegmentedControl(frame=(30.0,417.0,204.0,34.0),segments=('auto', 'xyz','123'),action= self.rbutton_tapped)
+    self.switch1=ui.Switch(frame=(6.0,87.0,51.0,31.0),action=self.setPin)
+    self.switch1.targetPin=2
+    self.switch2=ui.Switch(frame=(197,218,51.0,31.0),action=self.setPin)
+    self.switch2.targetPin=21
     self.view3=self.main_view['view3']
-    self.view5=self.main_view['view5']
+    self.view3.y=482
+    self.view2.y=482
+    self.sv.add_subview(self.view1)
+    self.sv.add_subview(self.view2)
+    self.sv.add_subview(self.view3)
+    self.sv.add_subview(self.rbtn1)
+    self.sv.add_subview(self.switch1)
+    self.sv.scene.view.add_subview(self.switch2)
+    self.keypad=keypadNode(position=(100,150),
+      keytitles=['inc','y','X','Z','dec','z','r/g','x','Y','../_'],on_output_change=self.keypad_output_changed)
+    
     self.view2.hidden=True
     self.view3.hidden=True
-    w=self.view5.width//4
-    h=self.view5.height//14
-    for i in range(28):
-      self.view5.add_subview(ui.Label(
-        frame=((i//14)*(self.view5.width-w), h*(i if i<14 else 27-i)+6,w,h-2),
-        background_color='blue', 
-        name=f'pin{i+1:02d}',
-        text=self.Eprom.pins[i+1][0],
-        alignment=ui.ALIGN_CENTER))
-    self.view5.add_subview(ui.Label(frame=(w,h,w*2,h),text='27C256',alignment=ui.ALIGN_CENTER))
-    self.view5.add_subview(ui.Label(frame=(w,0,w*2,h*0.6),text='U',alignment=ui.ALIGN_CENTER))
     for sv in self.view2.subviews: #copy, rotate, and rename numeric keys
       nb=ui.load_view_str(ui.dump_view(sv))
       nb.x=self.view3.width-sv.height-sv.y
@@ -320,11 +449,10 @@ class Demo:
     self.action = scn.Action.repeatActionForever(scn.Action.rotateBy(0, math.pi*2, 0, 10))
     self.origin_node.runAction(self.action)  
     
-    self.main_view.present(style='fullscreen', hide_title_bar=True)
-    
-  def quit(self,sender):
-    self.main_view.close()
-    
+    self.sv.present(orientations= ['landscape'])
+  def keypad_output_changed(self,i,value):
+    self.q.put((0,next(id),self.actions[['ABCDE','abcde'][value][i]]))
+    print(f'keypad_output_changed({i}, {value})')
   def update(self, view, atTime):
     n_blink=3
     tick = int(atTime*7) % (256*2*n_blink)
@@ -338,7 +466,7 @@ class Demo:
       ib=(gray>>6 & 1) 
       ib=ib and blink_phase
       if on:
-        xwire,ywire,led=((self.neg_wire,self.pos_wire,self.red_led),(self.pos_wire,self.neg_wire,self.green_led))[ic]
+        xwire,ywire,led=((self.neg_wire,self.pos_wire,self.green_led),(self.pos_wire,self.neg_wire,self.red_led))[ic]
         if ib:
           led=self.off_led
           xwire=self.off_wire
@@ -352,6 +480,7 @@ class Demo:
       self.wire_nodes[2][iy^1][iz].setGeometry(ywire)
       self.wire_nodes[0][((3,1,2,0),(0,2,1,3))[iy//2][iz]][iz].setGeometry(ywire)
       return #update_Led()
+      
     update_Led(self.index,on=False) 
     self.Eprom.activePins-=self.Eprom.pins_from_address(255)
     self.Eprom.activePins|=self.Eprom.pins_from_address(self.index)
@@ -364,13 +493,7 @@ class Demo:
       self.Eprom.run()
       self.index=self.Eprom.data_from_pins(self.Eprom.activePins)
     update_Led(self.index) 
-    def update_view5():
-      for i in type(self.Eprom).inputpins|type(self.Eprom).outputpins:
-        cl=((0.,1.,0.,1.,),(1.,0.,0.,1.,),)[i in self.Eprom.activePins]
-        sv=self.view5[f'pin{i:02d}']
-        sv.background_color=cl #program hangs at exit with this line
-    ui.in_background(update_view5)()#running it in the background works
-    # self.view5.subviews[i-1].background_color=((0,1,0,1,),(1,0,0,1,),)[i in self.Eprom.activePins]
+    self.sv.scene.Eprom.updatePins(self.Eprom.activePins)
     try:
       t,i,item=self.q.get_nowait()
       if t>atTime:
@@ -400,17 +523,18 @@ class Demo:
     self.mode=sender.selected_index
     if self.mode==0:
       self.view2.hidden=True
-      self.view3.hidden=True
+      self.keypad.remove_from_parent()
     elif self.mode==1:
       self.view2.hidden=True
-      self.view3.hidden=False
+      self.sv.scene.add_child(self.keypad)
     elif self.mode==2:
       self.view2.hidden=False
-      self.view3.hidden=True
+      self.keypad.remove_from_parent()
 
   def button_tapped(self,sender):
     self.key=sender.title
     self.q.put((0,next(id),self.transmit(self.key)))
+    
   def setPin(self,sender):
     if sender.value:
       self.Eprom.setPin(sender.targetPin)
