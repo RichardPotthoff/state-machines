@@ -168,24 +168,28 @@ import threading,queue
 import functools
 import operator
 import scene
-class ICNode(scene.SpriteNode):
-  def __init__(self,pins=None,*args,**kwargs):
+class ICNode(scene.ShapeNode):
+  def __init__(self,pins=None,size=None,stroke_color='black',*args,**kwargs):
     self.pins=pins
-    super().__init__(*args,**kwargs)
+    path=ui.Path.rect(0,0,*size,)
+    path.line_width=2
+    super().__init__(path=path,stroke_color=stroke_color,*args,**kwargs)
     if pins:
       n=len(pins)
       n2=n//2
-      w=self.size[0]//4
-      h=self.size[1]//n2
+      w=self.size[0]/4
+      h=self.size[1]/(n2+0.5)
       self.pinnodes=[scene.SpriteNode(
-          position=((i//n2)*(self.size[0]-w),h*(n2-1-i if i<n2 else i-n2)+6),
+          position=((i//n2)*(self.size[0]-w-4)+2,h*((n2-1-i if i<n2 else i-n2)-n2/4+0.5)+self.size[0]/2),
           size=(w,h-2),
-          anchor_point=(0,0),
+          anchor_point=(0.0,0.0),
           color='blue', 
           parent=self)
           for i in range(n)]
       for i,pn in enumerate(self.pinnodes):
         scene.LabelNode(text=Eprom.pins[i+1][0], position=pn.size/2,font=('Helvetica', 15), color='black',anchor_point=(0.5,0.5),parent=pn)
+      scene.LabelNode(text='27C256',position=(self.size[0]/2,self.size[1]*0.75),font=('Helvetica Bold', 16), color='black',anchor_point=(0.5,0.5),parent=self)
+      scene.LabelNode(text='U',position=(self.size[0]/2,self.size[1]),font=('Helvetica', 22), color='black',anchor_point=(0.5,0.9),parent=self)
       self.updatePins(set())
   def updatePins(self,ActivePins):
     for i in Eprom.inputpins|Eprom.outputpins:
@@ -334,19 +338,19 @@ class Demo:
     self.sv.multi_touch_enabled = True
     self.sv.shows_fps = True
     self.sv.bg_color=(1,1,1,1)
-    self.view1=ui.View(frame=(256,0,768,750))
+    self.view1=ui.View(frame=(256+768-750,0,750,750))
     self.rbtn1=ui.SegmentedControl(frame=(30.0,417.0,204.0,34.0),segments=('auto', 'xyz','123'),action= self.rbutton_tapped)
-    self.switch1=ui.Switch(frame=(6.0,87.0,51.0,31.0),action=self.setPin)
+    self.switch1=ui.Switch(frame=(6.0,84.0,51.0,31.0),action=self.setPin)
     self.switch1.targetPin=2
-    self.switch2=ui.Switch(frame=(197,218,51.0,31.0),action=self.setPin)
+    self.switch2=ui.Switch(frame=(197,217,51.0,31.0),action=self.setPin)
     self.switch2.targetPin=21
     self.sv.add_subview(self.view1)
     self.sv.add_subview(self.rbtn1)
     self.sv.add_subview(self.switch1)
     self.sv.scene.view.add_subview(self.switch2)
-    self.keypad1=keypadNode(position=(100,150),
+    self.keypad1=keypadNode(position=(122,150),
       keytitles=['inc','y','X','Z','dec','z','r/g','x','Y','../_'], on_output_change=self.keypad_output_changed)
-    self.keypad2=keypadNode(position=(128,128),
+    self.keypad2=keypadNode(position=(135,132),
       keytitles=['1','2','3','4','5','6','7','8','9','0'],
       orientation=((0,-1),(1,0),),
       on_output_change=self.keypad_output_changed)
