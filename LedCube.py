@@ -142,11 +142,11 @@ class Eprom1(Eprom):
           bitmask=(cyclelength-1)|64|128
           data=(data&bitmask)|(olddata&(bitmask^255))
       else:
-          if key==22:
+          if key==25: #reset, 3-key combination, e.g. {7,0,6}
             if mode==2:
               data=64
             else:
-              data=128  #reset if '+' and '-' are pressed simultaneously
+              data=128
     else:
       data=0 # data will be inverted -> data^255 = 255 (empty ROM)
     return data
@@ -203,7 +203,7 @@ class keyNode(scene.ShapeNode):
         stroke_width=radius*0.1
       path.line_width=stroke_width
       super().__init__(path=path,fill_color=fill_color,stroke_color=stroke_color,*args,**kwargs)
-      self.label=scene.LabelNode(position=(0,0), anchor_point=(0.5,0.5), text=title,font=('Helvetica',radius),parent=self,color=stroke_color)
+      self.label=scene.LabelNode(position=(0,0), anchor_point=(0.5,0.5), text=title,font=('Helvetica',radius*(0.8 if (len(title)>1) else 1)) ,parent=self,color=stroke_color)
       self.id=id
     @property
     def title(self):
@@ -259,7 +259,12 @@ class keypadNode(scene.ShapeNode):
         for node in self.children:
           if self.point_from_scene(touch.location) in node.frame:
             self.update_output(node.id,-1)
-
+    def reset_touches(self):
+      for i in range(len(self.output)):
+        if self.output[i]!=0:
+          self.output[i]=0
+          self.on_output_change(i,0)
+        
 class MyScene(scene.Scene):
     def setup(self):
             self.did_change_size()
@@ -286,6 +291,10 @@ class MyScene(scene.Scene):
                     node.touch_ended(touch)
 #       print(f'ended {touch.location},{touch.touch_id}')
     def update(self):
+      if not self.touches:
+        for node in self.children:
+            if hasattr(node, 'reset_touches'):
+              node.reset_touches()
       self.framecount+=1
 
 def countup(i=0):
@@ -339,7 +348,7 @@ class Demo:
     self.sv.shows_fps = True
     self.sv.bg_color=(1,1,1,1)
     self.view1=ui.View(frame=(256+768-750,0,750,750))
-    self.rbtn1=ui.SegmentedControl(frame=(30.0,417.0,204.0,34.0),segments=('auto', 'xyz','123'),action= self.rbutton_tapped)
+    self.rbtn1=ui.SegmentedControl(frame=(30.0,417.0,204.0,34.0),segments=('auto','xyz','123','nav'),action= self.rbutton_tapped)
     self.switch1=ui.Switch(frame=(6.0,84.0,51.0,31.0),action=self.setPin)
     self.switch1.targetPin=2
     self.switch2=ui.Switch(frame=(197,217,51.0,31.0),action=self.setPin)
@@ -354,6 +363,8 @@ class Demo:
       keytitles=['1','2','3','4','5','6','7','8','9','0'],
       orientation=((0,-1),(1,0),),
       on_output_change=self.keypad_output_changed)
+    self.keypad3=keypadNode(position=(122,150),
+      keytitles=['drop','N','E','U','take','D','shift','W','S','rst'], on_output_change=self.keypad_output_changed)
  
     self.mode=0
     self.key=''
@@ -498,15 +509,21 @@ class Demo:
   def rbutton_tapped(self,sender):
     self.mode=sender.selected_index
     if self.mode==0:
+      self.keypad3.remove_from_parent()
       self.keypad2.remove_from_parent()
       self.keypad1.remove_from_parent()
     elif self.mode==1:
+      self.keypad3.remove_from_parent()
       self.keypad2.remove_from_parent()
       self.sv.scene.add_child(self.keypad1)
     elif self.mode==2:
+      self.keypad3.remove_from_parent()
       self.sv.scene.add_child(self.keypad2)
       self.keypad1.remove_from_parent()
-
+    elif self.mode==3:
+      self.sv.scene.add_child(self.keypad3)
+      self.keypad1.remove_from_parent()
+      self.keypad2.remove_from_parent()
     
   def setPin(self,sender):
     if sender.value:
