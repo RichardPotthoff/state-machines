@@ -7,6 +7,19 @@ A 4x4x4 cube of LEDs for the visual display of the state of a state machine with
   The demo shows a Hamiltonian path through all 256 states. 
   
 """
+advent_room_descriptions={61: "YOU'RE AT WEST END OF LONG HALL.", 107: 'YOU ARE IN A MAZE OF TWISTY LITTLE PASSAGES, ALL DIFFERENT.', 112: 'YOU ARE IN A LITTLE MAZE OF TWISTING PASSAGES, ALL DIFFERENT.', 131: 'YOU ARE IN A MAZE OF TWISTING LITTLE PASSAGES, ALL DIFFERENT.', 132: 'YOU ARE IN A LITTLE MAZE OF TWISTY PASSAGES, ALL DIFFERENT.', 133: 'YOU ARE IN A TWISTING MAZE OF LITTLE PASSAGES, ALL DIFFERENT.', 134: 'YOU ARE IN A TWISTING LITTLE MAZE OF PASSAGES, ALL DIFFERENT.', 135: 'YOU ARE IN A TWISTY LITTLE MAZE OF PASSAGES, ALL DIFFERENT.', 136: 'YOU ARE IN A TWISTY MAZE OF LITTLE PASSAGES, ALL DIFFERENT.', 137: 'YOU ARE IN A LITTLE TWISTY MAZE OF PASSAGES, ALL DIFFERENT.', 138: 'YOU ARE IN A MAZE OF LITTLE TWISTING PASSAGES, ALL DIFFERENT.', 139: 'YOU ARE IN A MAZE OF LITTLE TWISTY PASSAGES, ALL DIFFERENT.', 140: 'DEAD END',}
+advent_room_descriptions.update({1000:'Select Game: "E"=maze',1061:"YOU'RE BACK AT WEST END OF LONG HALL.",})
+advent_map={ 29: 61, 156:132,  20:133, 149:1000,
+            153:107,  24:135, 144:136,  17:1061,
+            159:131,  30:139, 150:112,  23:140,
+             27:138, 154:134,  18:137, }
+advent_imap={j:i for i,j in advent_map.items()}
+advent_edges=[(61, 'S', 107), (107, 'D', 61), (133, 'S', 112), (112, 'E', 133), (133, 'W', 132), (132, 'N', 133), (135, 'N', 107), (107, 'U', 135), (135, 'D', 132), (132, 'W', 135), (135, 'E', 134), (134, 'E', 135), (135, 'W', 136), (136, 'S', 135), (137, 'W', 112), (112, 'W', 137), (137, 'U', 134), (134, 'S', 137), (138, 'D', 107), (107, 'W', 138), (138, 'E', 131), (131, 'N', 138), (138, 'W', 134), (134, 'U', 138), (139, 'E', 132), (132, 'D', 139), (139, 'N', 134), (134, 'W', 139), (140, 'N', 112), (112, 'S', 140)]
+advent_edges.append((1000,'E',61))
+advent_map2=advent_map.copy()
+advent_map2.update({i^128:room for i,room in advent_map.items()})
+advent_rooms={room:{action:room2 for room1,action,room2 in advent_edges if room1==room} for room in advent_imap}
+advent_keymapping={1:'P',2:'N',3:'E',4:'U',5:'T',6:'D',7:None,8:'W',9:'S',0:None}
 from collections import namedtuple
 def count_bits(n):
   n = (n & 0x5555555555555555) + ((n & 0xAAAAAAAAAAAAAAAA) >> 1)
@@ -147,6 +160,24 @@ class Eprom1(Eprom):
               data=64
             else:
               data=128
+    elif mode==3:
+      key=self.key(self.pins_from_address(address))
+      action=advent_keymapping.get(key)
+      data=address&255
+      parity=(count_bits(data)&1)==0
+      if not parity and key==-6:
+          data^=1<<7 #key released -> flip msb to make parity even
+      elif parity and action:
+        olddata=data
+        room=advent_map[data]
+        room_actions=advent_rooms[room]
+        if action in room_actions:
+          newdata=advent_imap[room_actions[action]]
+#          print(data,action,newdata)
+          data=newdata^128
+      else:
+          if key==25: #reset, 3-key combination, e.g. {7,0,6}
+            data=149^128
     else:
       data=0 # data will be inverted -> data^255 = 255 (empty ROM)
     return data
@@ -271,6 +302,8 @@ class MyScene(scene.Scene):
             self.framecount=0
             self.background_color='white'
             self.Eprom= ICNode(pins=Eprom.pins, position=(54,385), size=(145,320), anchor_point=(0,0), color='white', parent=self)     
+            self.message=scene.LabelNode(position=(230,0), anchor_point=(0,0),  text='messagebox '*5,font=('Courier',16),parent=self,color='black')
+            self.messagetext=''
     def touch_began(self,touch): 
        for node in self.children:
             if hasattr(node, 'touch_began'):
@@ -295,6 +328,7 @@ class MyScene(scene.Scene):
         for node in self.children:
             if hasattr(node, 'reset_touches'):
               node.reset_touches()
+      self.message.text=self.messagetext
       self.framecount+=1
 
 def countup(i=0):
@@ -347,8 +381,9 @@ class Demo:
     self.sv.multi_touch_enabled = True
     self.sv.shows_fps = True
     self.sv.bg_color=(1,1,1,1)
-    self.view1=ui.View(frame=(256+768-750,0,750,750))
-    self.rbtn1=ui.SegmentedControl(frame=(30.0,417.0,204.0,34.0),segments=('auto','xyz','123','nav'),action= self.rbutton_tapped)
+    self.view1=ui.View(frame=(256+768-730,0,730,730))
+    self.messagetext=''
+    self.rbtn1=ui.SegmentedControl(frame=(30.0,417.0,204.0,34.0),segments=('auto','xyz','123','maze'),action= self.rbutton_tapped)
     self.switch1=ui.Switch(frame=(6.0,84.0,51.0,31.0),action=self.setPin)
     self.switch1.targetPin=2
     self.switch2=ui.Switch(frame=(197,217,51.0,31.0),action=self.setPin)
@@ -364,7 +399,7 @@ class Demo:
       orientation=((0,-1),(1,0),),
       on_output_change=self.keypad_output_changed)
     self.keypad3=keypadNode(position=(122,150),
-      keytitles=['drop','N','E','U','take','D','shift','W','S','rst'], on_output_change=self.keypad_output_changed)
+      keytitles=['put','N','E','U','take','D','shift','W','S','rst'], on_output_change=self.keypad_output_changed)
  
     self.mode=0
     self.key=''
@@ -491,6 +526,9 @@ class Demo:
       self.index=self.Eprom.data_from_pins(self.Eprom.activePins)
     update_Led(self.index) 
     self.sv.scene.Eprom.updatePins(self.Eprom.activePins)
+    ad_index=advent_map2.get(self.index)
+    ad_description=advent_room_descriptions.get(advent_map2.get(self.index))
+    self.sv.scene.messagetext=f'{self.index:3d} {self.index:08b}'+(f' {ad_index:3d} {ad_description}'if ad_index else '')
     try:
       t,i,item=self.q.get_nowait()
       if t>atTime:
@@ -521,9 +559,17 @@ class Demo:
       self.sv.scene.add_child(self.keypad2)
       self.keypad1.remove_from_parent()
     elif self.mode==3:
-      self.sv.scene.add_child(self.keypad3)
+      self.switch1.value=1
+      self.setPin(self.switch1)
+      self.switch2.value=1
+      self.setPin(self.switch2)
+      for i in range(5):
+          self.keypad_output_changed(i,1)#reset, start at game selection (simulate ["shift" "rst" "D"])
+      for i in range(5):
+          self.keypad_output_changed(i,0)
       self.keypad1.remove_from_parent()
       self.keypad2.remove_from_parent()
+      self.sv.scene.add_child(self.keypad3)
     
   def setPin(self,sender):
     if sender.value:
