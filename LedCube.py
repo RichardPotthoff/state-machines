@@ -8,14 +8,23 @@ A 4x4x4 cube of LEDs for the visual display of the state of a state machine with
   
 """
 advent_room_descriptions={61: "YOU'RE AT WEST END OF LONG HALL.", 107: 'YOU ARE IN A MAZE OF TWISTY LITTLE PASSAGES, ALL DIFFERENT.', 112: 'YOU ARE IN A LITTLE MAZE OF TWISTING PASSAGES, ALL DIFFERENT.', 131: 'YOU ARE IN A MAZE OF TWISTING LITTLE PASSAGES, ALL DIFFERENT.', 132: 'YOU ARE IN A LITTLE MAZE OF TWISTY PASSAGES, ALL DIFFERENT.', 133: 'YOU ARE IN A TWISTING MAZE OF LITTLE PASSAGES, ALL DIFFERENT.', 134: 'YOU ARE IN A TWISTING LITTLE MAZE OF PASSAGES, ALL DIFFERENT.', 135: 'YOU ARE IN A TWISTY LITTLE MAZE OF PASSAGES, ALL DIFFERENT.', 136: 'YOU ARE IN A TWISTY MAZE OF LITTLE PASSAGES, ALL DIFFERENT.', 137: 'YOU ARE IN A LITTLE TWISTY MAZE OF PASSAGES, ALL DIFFERENT.', 138: 'YOU ARE IN A MAZE OF LITTLE TWISTING PASSAGES, ALL DIFFERENT.', 139: 'YOU ARE IN A MAZE OF LITTLE TWISTY PASSAGES, ALL DIFFERENT.', 140: 'DEAD END',}
-advent_room_descriptions.update({1000:'Select Game: "E"=maze',1061:"YOU'RE BACK AT WEST END OF LONG HALL.",})
+advent_room_descriptions.update({room+2000:'/'+text for room,text in advent_room_descriptions.items()})
+advent_room_descriptions.update({1000:'Select Game: "E"=maze',
+3061:"YOU'RE BACK AT WEST END OF LONG HALL.",
+140:"DEAD END. THERE IS A VENDING MACHINE. PUT COINS IN TO GET BATTERIES.",
+2140:"DEAD END. YOU NOW HAVE FRESH BATTERIES."})
 advent_map={ 29: 61, 156:132,  20:133, 149:1000,
             153:107,  24:135, 144:136,  17:1061,
             159:131,  30:139, 150:112,  23:140,
              27:138, 154:134,  18:137, }
+advent_map.update({id^(128|64):room+2000 for id,room in advent_map.items()})#the "blinking" rooms
 advent_imap={j:i for i,j in advent_map.items()}
 advent_edges=[(61, 'S', 107), (107, 'D', 61), (133, 'S', 112), (112, 'E', 133), (133, 'W', 132), (132, 'N', 133), (135, 'N', 107), (107, 'U', 135), (135, 'D', 132), (132, 'W', 135), (135, 'E', 134), (134, 'E', 135), (135, 'W', 136), (136, 'S', 135), (137, 'W', 112), (112, 'W', 137), (137, 'U', 134), (134, 'S', 137), (138, 'D', 107), (107, 'W', 138), (138, 'E', 131), (131, 'N', 138), (138, 'W', 134), (134, 'U', 138), (139, 'E', 132), (132, 'D', 139), (139, 'N', 134), (134, 'W', 139), (140, 'N', 112), (112, 'S', 140)]
+advent_edges=(advent_edges +
+             [(room1+2000,action,room2+2000) for room1,action,room2 in advent_edges if not ((room1==107) and (room2==61))])#"blinking" edges
 advent_edges.append((1000,'E',61))
+advent_edges.append((2107,'D',3061))
+advent_edges.append((140,'P',2140))
 advent_map2=advent_map.copy()
 advent_map2.update({i^128:room for i,room in advent_map.items()})
 advent_rooms={room:{action:room2 for room1,action,room2 in advent_edges if room1==room} for room in advent_imap}
