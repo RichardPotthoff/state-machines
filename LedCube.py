@@ -9,14 +9,46 @@ A 4x4x4 cube of LEDs for the visual display of the state of a state machine with
 """
 advent_room_descriptions={61: "YOU'RE AT WEST END OF LONG HALL.", 107: 'YOU ARE IN A MAZE OF TWISTY LITTLE PASSAGES, ALL DIFFERENT.', 112: 'YOU ARE IN A LITTLE MAZE OF TWISTING PASSAGES, ALL DIFFERENT.', 131: 'YOU ARE IN A MAZE OF TWISTING LITTLE PASSAGES, ALL DIFFERENT.', 132: 'YOU ARE IN A LITTLE MAZE OF TWISTY PASSAGES, ALL DIFFERENT.', 133: 'YOU ARE IN A TWISTING MAZE OF LITTLE PASSAGES, ALL DIFFERENT.', 134: 'YOU ARE IN A TWISTING LITTLE MAZE OF PASSAGES, ALL DIFFERENT.', 135: 'YOU ARE IN A TWISTY LITTLE MAZE OF PASSAGES, ALL DIFFERENT.', 136: 'YOU ARE IN A TWISTY MAZE OF LITTLE PASSAGES, ALL DIFFERENT.', 137: 'YOU ARE IN A LITTLE TWISTY MAZE OF PASSAGES, ALL DIFFERENT.', 138: 'YOU ARE IN A MAZE OF LITTLE TWISTING PASSAGES, ALL DIFFERENT.', 139: 'YOU ARE IN A MAZE OF LITTLE TWISTY PASSAGES, ALL DIFFERENT.', 140: 'DEAD END',}
 advent_room_descriptions.update({room+2000:'/'+text for room,text in advent_room_descriptions.items()})
-advent_room_descriptions.update({1000:'Select Game: "E"=maze',
+advent_room_descriptions.update({1000:'Select Game: "E"=maze, "N"=Casino',
 3061:"YOU'RE BACK AT WEST END OF LONG HALL.",
+1061:"YOU DROPPED THE BATTERIES. WEST END OF LONG HALL.",
 140:"DEAD END. THERE IS A VENDING MACHINE. PUT COINS IN TO GET BATTERIES.",
-2140:"DEAD END. YOU NOW HAVE FRESH BATTERIES."})
+2140:"DEAD END. YOU NOW HAVE FRESH BATTERIES.",
+4000:"CASINO. ROLL THE DICE (PUT)",
+4001:'YOU GOT A "1". YOU NEED A "6". TRY AGAIN.',
+4002:'YOU GOT A "2". YOU NEED A "6". TRY AGAIN.',
+4003:'YOU GOT A "3". THE CODE IS: "SENDPUT"',
+4004:'YOU GOT A "4". YOU NEED A "6". TRY AGAIN.',
+4005:'YOU GOT A "5". YOU NEED A "6". TRY AGAIN.',
+4006:'YOU GOT A "6". YOU MAY EXIT TO THE SOUTH.',
+4007:'CASINO VAULT. ENTER THE CODE. (ROLL THE DICE TO GET THE CODE)',
+4010:'THE DICE ARE ROLLING.',
+4011:'THE DICE ARE ROLLING.',
+4012:'THE DICE ARE ROLLING.',
+4013:'THE DICE ARE ROLLING.',
+4014:'THE DICE ARE ROLLING.',
+4015:'THE DICE ARE ROLLING.',
+4016:'THE DICE ARE ROLLING.',
+4017:'CASINO VAULT. ENTER THE CODE.',
+4027:'#1 CORRECT. ENTER THE 2ND LETTER OF THE CODE',
+4026:'ENTER THE 3RD LETTER OF THE CODE.',
+4025:'ENTER THE 4TH LETTER OF THE CODE.',
+4024:'ENTER THE NEXT LETTER OF THE CODE.',
+4023:'ENTER THE NEXT LETTER OF THE CODE.',
+4022:'ENTER THE NEXT LETTER OF THE CODE.',
+4021:'YOU HAVE ENTERED THE CORRECT CODE. THE VAULT IS NOW OPEN',
+})
+
 advent_map={ 29: 61, 156:132,  20:133, 149:1000,
             153:107,  24:135, 144:136,  17:1061,
             159:131,  30:139, 150:112,  23:140,
-             27:138, 154:134,  18:137, }
+             27:138, 154:134,  18:137, 
+                5:4000, 132:4001,  12:4002, 141:4003,
+               15:4004, 142:4005,   6:4006, 135:4007,
+              133:4010,   4:4011, 140:4012,  13:4013,
+              143:4014,  14:4015, 134:4016,   7:4017,
+              129:4020,   0:4021, 136:4022,   9:4023,
+              139:4024,  10:4025, 130:4026,   3:4027,}
 advent_map.update({id^(128|64):room+2000 for id,room in advent_map.items()})#the "blinking" rooms
 advent_imap={j:i for i,j in advent_map.items()}
 advent_edges=[(61, 'S', 107), (107, 'D', 61), (133, 'S', 112), (112, 'E', 133), (133, 'W', 132), (132, 'N', 133), (135, 'N', 107), (107, 'U', 135), (135, 'D', 132), (132, 'W', 135), (135, 'E', 134), (134, 'E', 135), (135, 'W', 136), (136, 'S', 135), (137, 'W', 112), (112, 'W', 137), (137, 'U', 134), (134, 'S', 137), (138, 'D', 107), (107, 'W', 138), (138, 'E', 131), (131, 'N', 138), (138, 'W', 134), (134, 'U', 138), (139, 'E', 132), (132, 'D', 139), (139, 'N', 134), (134, 'W', 139), (140, 'N', 112), (112, 'S', 140)]
@@ -25,8 +57,42 @@ advent_edges=(advent_edges +
 advent_edges.append((1000,'E',61))
 advent_edges.append((2107,'D',3061))
 advent_edges.append((140,'P',2140))
-advent_map2=advent_map.copy()
-advent_map2.update({i^128:room for i,room in advent_map.items()})
+advent_edges.append((3061,'P',1061))
+advent_edges.append((1061,'S', 107))
+advent_edges.append((1000,'N', 4000))
+advent_edges.append((4000,'P', 4010))
+advent_edges.append((4010,'P', 4011))
+advent_edges.append((4011,'P', 4012))
+advent_edges.append((4012,'P', 4013))
+advent_edges.append((4013,'P', 4014))
+advent_edges.append((4014,'P', 4015))
+advent_edges.append((4015,'P', 4016))
+advent_edges.append((4016,'P', 4011))
+advent_edges.append((4001,'P', 4011))
+advent_edges.append((4002,'P', 4012))
+advent_edges.append((4003,'P', 4013))
+advent_edges.append((4004,'P', 4014))
+advent_edges.append((4005,'P', 4015))
+advent_edges.append((4006,'P', 4016))
+advent_edges.append((4006,'S', 4007))
+advent_edges.append((4007,'W', 4000))
+advent_edges.append((4000,'E', 4007))
+advent_edges.append((4007,'S', 4027))
+advent_edges.append((4027,'E', 4026))
+advent_edges.append((4026,'_', 4027))
+advent_edges.append((4026,'N', 4025))
+advent_edges.append((4025,'_', 4026))
+advent_edges.append((4025,'D', 4024))
+advent_edges.append((4024,'_', 4025))
+advent_edges.append((4024,'P', 4023))
+advent_edges.append((4023,'_', 4024))
+advent_edges.append((4023,'U', 4022))
+advent_edges.append((4022,'_', 4023))
+advent_edges.append((4022,'T', 4021))
+advent_edges.append((4021,'_', 4020))
+
+advent_map2={i^128:room for i,room in advent_map.items()}
+advent_map2.update(advent_map)
 advent_rooms={room:{action:room2 for room1,action,room2 in advent_edges if room1==room} for room in advent_imap}
 advent_keymapping={1:'P',2:'N',3:'E',4:'U',5:'T',6:'D',7:None,8:'W',9:'S',0:None}
 from collections import namedtuple
@@ -174,16 +240,26 @@ class Eprom1(Eprom):
       action=advent_keymapping.get(key)
       data=address&255
       parity=(count_bits(data)&1)==0
-      if not parity and key==-6:
+      olddata=data
+      room=advent_map.get(data)
+      room_actions=advent_rooms.get(room)
+      if key==-6:
+        if not parity:
           data^=1<<7 #key released -> flip msb to make parity even
-      elif parity and action:
-        olddata=data
-        room=advent_map[data]
-        room_actions=advent_rooms[room]
-        if action in room_actions:
-          newdata=advent_imap[room_actions[action]]
-#          print(data,action,newdata)
-          data=newdata^128
+        elif room_actions:
+          if '__' in room_actions:
+            newdata=advent_imap.get(room_actions.get('__'))
+            if newdata!=None:
+              data=newdata
+      elif action and room_actions:
+        newroom=room_actions.get(action)
+        if newroom==None:
+          newroom=room_actions.get('_')#default action
+        newdata=advent_imap.get(newroom)
+        if newdata!=None:
+          if (count_bits(newdata)&1)==0:
+              newdata=newdata^128       
+          data=newdata
       else:
           if key==25: #reset, 3-key combination, e.g. {7,0,6}
             data=149^128
@@ -407,9 +483,9 @@ class Demo:
       keytitles=['1','2','3','4','5','6','7','8','9','0'],
       orientation=((0,-1),(1,0),),
       on_output_change=self.keypad_output_changed)
-    self.keypad3=keypadNode(position=(122,150),
-      keytitles=['put','N','E','U','take','D','shift','W','S','rst'], on_output_change=self.keypad_output_changed)
- 
+    self.keypad3=keypadNode(radius=150,position=(122,150),
+      keytitles=['Put','N','E','U','Take','D','Ctrl','W','S','Alt'], on_output_change=self.keypad_output_changed)
+    scene.LabelNode(position=(-30,-120), anchor_point=(0,0), text='Reset: [Ctrl Alt D]',font=('Helvetica',15),parent=self.keypad3,color='black')
     self.mode=0
     self.key=''
     self.scene_view = scn.View((0,0,self.view1.frame[2],self.view1.frame[3]), superView=self.view1)
