@@ -20,7 +20,7 @@ advent_room_descriptions.update({1000:'Select Game: "E"=maze, "N"=Casino',
 4003:'YOU GOT A "3". THE CODE IS: "SENDPUT"',
 4004:'YOU GOT A "4". YOU NEED A "6". TRY AGAIN.',
 4005:'YOU GOT A "5". YOU NEED A "6". TRY AGAIN.',
-4006:'YOU GOT A "6". YOU MAY EXIT TO THE SOUTH.',
+4006:'YOU GOT A "6". YOU WIN! TAKE YOUR WINNINGS.',
 4007:'CASINO VAULT. ENTER THE CODE. (ROLL THE DICE TO GET THE CODE)',
 4010:'THE DICE ARE ROLLING.',
 4011:'THE DICE ARE ROLLING.',
@@ -37,18 +37,27 @@ advent_room_descriptions.update({1000:'Select Game: "E"=maze, "N"=Casino',
 4023:'ENTER THE NEXT LETTER OF THE CODE.',
 4022:'ENTER THE NEXT LETTER OF THE CODE.',
 4021:'YOU HAVE ENTERED THE CORRECT CODE. THE VAULT IS NOW OPEN',
-})
+4037:'#1 CORRECT. ENTER THE 2ND LETTER OF THE CODE',
+4036:'ENTER THE 3RD LETTER OF THE CODE.',
+4035:'ENTER THE 4TH LETTER OF THE CODE.',
+4034:'ENTER THE NEXT LETTER OF THE CODE.',
+4033:'ENTER THE NEXT LETTER OF THE CODE.',
+4032:'ENTER THE NEXT LETTER OF THE CODE.',
+4031:'YOU HAVE ENTERED THE CORRECT CODE. THE VAULT IS NOW OPEN',})
 
 advent_map={ 29: 61, 156:132,  20:133, 149:1000,
             153:107,  24:135, 144:136,  17:1061,
             159:131,  30:139, 150:112,  23:140,
              27:138, 154:134,  18:137, 
-                5:4000, 132:4001,  12:4002, 141:4003,
-               15:4004, 142:4005,   6:4006, 135:4007,
-              133:4010,   4:4011, 140:4012,  13:4013,
-              143:4014,  14:4015, 134:4016,   7:4017,
+                5:4000, 132:4006,  12:4005, 141:4004,
+               15:4003, 142:4002,   6:4001, 135:4007,
+              133:4010,   4:4016, 140:4015,  13:4014,
+              143:4013,  14:4012, 134:4011,   7:4017,
               129:4020,   0:4021, 136:4022,   9:4023,
-              139:4024,  10:4025, 130:4026,   3:4027,}
+              139:4024,  10:4025, 130:4026,   3:4027,
+                1:4030, 128:4031,   8:4032, 137:4033,
+               11:4034, 138:4035,   2:4036, 131:4037,}
+
 advent_map.update({id^(128|64):room+2000 for id,room in advent_map.items()})#the "blinking" rooms
 advent_imap={j:i for i,j in advent_map.items()}
 advent_edges=[(61, 'S', 107), (107, 'D', 61), (133, 'S', 112), (112, 'E', 133), (133, 'W', 132), (132, 'N', 133), (135, 'N', 107), (107, 'U', 135), (135, 'D', 132), (132, 'W', 135), (135, 'E', 134), (134, 'E', 135), (135, 'W', 136), (136, 'S', 135), (137, 'W', 112), (112, 'W', 137), (137, 'U', 134), (134, 'S', 137), (138, 'D', 107), (107, 'W', 138), (138, 'E', 131), (131, 'N', 138), (138, 'W', 134), (134, 'U', 138), (139, 'E', 132), (132, 'D', 139), (139, 'N', 134), (134, 'W', 139), (140, 'N', 112), (112, 'S', 140)]
@@ -61,23 +70,25 @@ advent_edges.append((3061,'P',1061))
 advent_edges.append((1061,'S', 107))
 advent_edges.append((1000,'N', 4000))
 advent_edges.append((4000,'P', 4010))
-advent_edges.append((4010,'P', 4011))
-advent_edges.append((4011,'P', 4012))
-advent_edges.append((4012,'P', 4013))
-advent_edges.append((4013,'P', 4014))
-advent_edges.append((4014,'P', 4015))
-advent_edges.append((4015,'P', 4016))
-advent_edges.append((4016,'P', 4011))
+advent_edges.append((4010,'P', 4006))
+advent_edges.append((4011,'P', 4002))
+advent_edges.append((4012,'P', 4003))
+advent_edges.append((4013,'P', 4004))
+advent_edges.append((4014,'P', 4005))
+advent_edges.append((4015,'P', 4006))
+advent_edges.append((4016,'P', 4001))
 advent_edges.append((4001,'P', 4011))
 advent_edges.append((4002,'P', 4012))
 advent_edges.append((4003,'P', 4013))
 advent_edges.append((4004,'P', 4014))
 advent_edges.append((4005,'P', 4015))
 advent_edges.append((4006,'P', 4016))
-advent_edges.append((4006,'S', 4007))
+advent_edges.append((4006,'T', 4000))
 advent_edges.append((4007,'W', 4000))
+advent_edges.append((4017,'W', 4000))
 advent_edges.append((4000,'E', 4007))
 advent_edges.append((4007,'S', 4027))
+advent_edges.append((4027,'W', 4007))
 advent_edges.append((4027,'E', 4026))
 advent_edges.append((4026,'_', 4027))
 advent_edges.append((4026,'N', 4025))
@@ -87,9 +98,24 @@ advent_edges.append((4024,'_', 4025))
 advent_edges.append((4024,'P', 4023))
 advent_edges.append((4023,'_', 4024))
 advent_edges.append((4023,'U', 4022))
-advent_edges.append((4022,'_', 4023))
+advent_edges.append((4022,'_', 4025))
 advent_edges.append((4022,'T', 4021))
-advent_edges.append((4021,'_', 4020))
+advent_edges.append((4021,'_', 4026))
+advent_edges.append((4037,'W', 4007))
+advent_edges.append((4036,'W', 4027))
+advent_edges.append((4035,'W', 4026))
+advent_edges.append((4034,'W', 4025))
+advent_edges.append((4033,'W', 4024))
+advent_edges.append((4032,'W', 4025))
+advent_edges.append((4031,'W', 4026))
+
+
+#advent_edges.append((4001,'__', 4002))
+#advent_edges.append((4002,'__', 4003))
+#advent_edges.append((4003,'__', 4004))
+#advent_edges.append((4004,'__', 4005))
+#advent_edges.append((4005,'__', 4006))
+
 
 advent_map2={i^128:room for i,room in advent_map.items()}
 advent_map2.update(advent_map)
@@ -157,7 +183,7 @@ class Eprom(IC):
   outputpins=datapins=frozenset(key for key,value in pins.items() if value.output)
   inputpins=addresspins=frozenset(key for key,value in pins.items() if value.input)
   keypadLookupTable={
-       frozenset(()):-6,
+       frozenset(()):None,
        frozenset((27,)):-1,
        frozenset((26,)):-2,
        frozenset((25,)):-3,
@@ -207,7 +233,7 @@ class Eprom1(Eprom):
       key=self.key(self.pins_from_address(address))
       data=address&255
       parity=(count_bits(data)&1)==0
-      if not parity and key==-6:
+      if not parity and key==None:
           data^=1<<7 #key released -> flip msb to make parity even
       elif parity:
         olddata=data
@@ -243,7 +269,7 @@ class Eprom1(Eprom):
       olddata=data
       room=advent_map.get(data)
       room_actions=advent_rooms.get(room)
-      if key==-6:
+      if key==None:
         if not parity:
           data^=1<<7 #key released -> flip msb to make parity even
         elif room_actions:
