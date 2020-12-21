@@ -7,6 +7,15 @@ A 4x4x4 cube of LEDs for the visual display of the state of a state machine with
   The demo shows a Hamiltonian path through all 256 states. 
   
 """
+def count_bits(n):
+  n = (n & 0x5555555555555555) + ((n & 0xAAAAAAAAAAAAAAAA) >> 1)
+  n = (n & 0x3333333333333333) + ((n & 0xCCCCCCCCCCCCCCCC) >> 2)
+  n = (n & 0x0F0F0F0F0F0F0F0F) + ((n & 0xF0F0F0F0F0F0F0F0) >> 4)
+  n = (n & 0x00FF00FF00FF00FF) + ((n & 0xFF00FF00FF00FF00) >> 8)
+  n = (n & 0x0000FFFF0000FFFF) + ((n & 0xFFFF0000FFFF0000) >> 16)
+  n = (n & 0x00000000FFFFFFFF) + ((n & 0xFFFFFFFF00000000) >> 32) # This last & isn't strictly necessary.
+  return n
+
 advent_room_descriptions={61: "YOU'RE AT WEST END OF LONG HALL.", 107: 'YOU ARE IN A MAZE OF TWISTY LITTLE PASSAGES, ALL DIFFERENT.', 112: 'YOU ARE IN A LITTLE MAZE OF TWISTING PASSAGES, ALL DIFFERENT.', 131: 'YOU ARE IN A MAZE OF TWISTING LITTLE PASSAGES, ALL DIFFERENT.', 132: 'YOU ARE IN A LITTLE MAZE OF TWISTY PASSAGES, ALL DIFFERENT.', 133: 'YOU ARE IN A TWISTING MAZE OF LITTLE PASSAGES, ALL DIFFERENT.', 134: 'YOU ARE IN A TWISTING LITTLE MAZE OF PASSAGES, ALL DIFFERENT.', 135: 'YOU ARE IN A TWISTY LITTLE MAZE OF PASSAGES, ALL DIFFERENT.', 136: 'YOU ARE IN A TWISTY MAZE OF LITTLE PASSAGES, ALL DIFFERENT.', 137: 'YOU ARE IN A LITTLE TWISTY MAZE OF PASSAGES, ALL DIFFERENT.', 138: 'YOU ARE IN A MAZE OF LITTLE TWISTING PASSAGES, ALL DIFFERENT.', 139: 'YOU ARE IN A MAZE OF LITTLE TWISTY PASSAGES, ALL DIFFERENT.', 140: 'DEAD END',}
 advent_room_descriptions.update({room+2000:'/'+text for room,text in advent_room_descriptions.items()})
 advent_room_descriptions.update({1000:'Select Game: "E"=maze, "N"=Casino',
@@ -57,7 +66,6 @@ advent_map={ 29: 61, 156:132,  20:133, 149:1000,
                11:4034, 138:4035,   2:4036, 131:4037,}
 
 advent_map.update({id^(128|64):room+2000 for id,room in advent_map.items()})#the "blinking" rooms
-advent_imap={j:i for i,j in advent_map.items()}
 advent_edges=[(61, 'S', 107), (107, 'D', 61), (133, 'S', 112), (112, 'E', 133), (133, 'W', 132), (132, 'N', 133), (135, 'N', 107), (107, 'U', 135), (135, 'D', 132), (132, 'W', 135), (135, 'E', 134), (134, 'E', 135), (135, 'W', 136), (136, 'S', 135), (137, 'W', 112), (112, 'W', 137), (137, 'U', 134), (134, 'S', 137), (138, 'D', 107), (107, 'W', 138), (138, 'E', 131), (131, 'N', 138), (138, 'W', 134), (134, 'U', 138), (139, 'E', 132), (132, 'D', 139), (139, 'N', 134), (134, 'W', 139), (140, 'N', 112), (112, 'S', 140)]
 advent_edges=(advent_edges +
              [(room1+2000,action,room2+2000) for room1,action,room2 in advent_edges if not ((room1==107) and (room2==61))])#"blinking" edges
@@ -100,29 +108,22 @@ advent_edges.append((4036,'W', 4027))
 advent_edges.append((4035,'W', 4026))
 advent_edges.append((4034,'W', 4025))
 advent_edges.append((4033,'W', 4024))
-advent_edges.append((4023,'E', 4022))
+advent_edges.append((4023,'E', 5201))
 
-#advent_edges.append((4001,'__', 4002))
-#advent_edges.append((4002,'__', 4003))
-#advent_edges.append((4003,'__', 4004))
-#advent_edges.append((4004,'__', 4005))
-#advent_edges.append((4005,'__', 4006))
-
-
+advent_keymapping={1:'P', 2:'N', 3:'E', 4:'U', 5:'T', 6:'D', 7:'C', 8:'W', 9:'S', 0:'A',
+                   10:'NW', 14:'SW', 16:'^T', 17:'SE', 18:'NE', 19:'^P',}
+keynames=list(advent_keymapping.values())
+advent_room_descriptions.update({5000+i+j+64:f'Room {keyname} {"(pushed)" if count_bits(i+j+64)&1 else "(released)"}' for i,keyname in enumerate(keynames) for j in (0,128)})
+advent_map.update({i+j+64:5000+i+j+64 for i in range(len(keynames)) for j in (0,128)})
+advent_edges+=[(room1,action,room2) for i in range(len(keynames)) for j in (0,128) for k,action in enumerate(keynames) for room1,room2 in ((5000+i+j+64,5000+k+64),) if not action in ('A','C')]
+advent_edges.append((4000,'D',5069))
 advent_map2={i^128:room for i,room in advent_map.items()}
 advent_map2.update(advent_map)
+advent_imap={j:i for i,j in advent_map.items()} 
 advent_rooms={room:{action:room2 for room1,action,room2 in advent_edges if room1==room} for room in advent_imap}
-advent_keymapping={1:'P',2:'N',3:'E',4:'U',5:'T',6:'D',7:None,8:'W',9:'S',0:None}
+                   
+                   
 from collections import namedtuple
-def count_bits(n):
-  n = (n & 0x5555555555555555) + ((n & 0xAAAAAAAAAAAAAAAA) >> 1)
-  n = (n & 0x3333333333333333) + ((n & 0xCCCCCCCCCCCCCCCC) >> 2)
-  n = (n & 0x0F0F0F0F0F0F0F0F) + ((n & 0xF0F0F0F0F0F0F0F0) >> 4)
-  n = (n & 0x00FF00FF00FF00FF) + ((n & 0xFF00FF00FF00FF00) >> 8)
-  n = (n & 0x0000FFFF0000FFFF) + ((n & 0xFFFF0000FFFF0000) >> 16)
-  n = (n & 0x00000000FFFFFFFF) + ((n & 0xFFFFFFFF00000000) >> 32) # This last & isn't strictly necessary.
-  return n
-
 pinspec=namedtuple('pinspec','name, input, output')
 pinspec.__new__.__defaults__=('',0,0)
 
@@ -353,7 +354,7 @@ class keyNode(scene.ShapeNode):
       titlelines=title.split('\n')
       for i,titleline in enumerate(titlelines):
         fontsize=radius*(0.8 if (len(title)>1) else 1)
-        y=((len(titlelines)-1)/2-i)*fontsize
+        y=((len(titlelines)-1)/2-i)*fontsize*0.9
         if len(titlelines)>1: y-=fontsize*0.2
         if titleline[0]=='{':
           titleline=titleline.strip('{}')
@@ -409,10 +410,14 @@ class keypadNode(scene.ShapeNode):
             self.on_output_change(i,1)
     def touch_began(self, touch):
         for node in self.children:
-          if self.point_from_scene(touch.location) in node.frame:
+          if type(node)!=keyNode:
+            continue
+          if (self.point_from_scene(touch.location) in node.frame):
             self.update_output(node.id,+1)
     def touch_moved(self, touch):
         for node in self.children:
+          if type(node)!=keyNode:
+            continue
           is_inside=self.point_from_scene(touch.location) in node.frame
           was_inside=self.point_from_scene(touch.prev_location) in node.frame
           if is_inside and not was_inside:
@@ -421,6 +426,8 @@ class keypadNode(scene.ShapeNode):
             self.update_output(node.id,-1)
     def touch_ended(self, touch):
         for node in self.children:
+          if type(node)!=keyNode:
+            continue
           if self.point_from_scene(touch.location) in node.frame:
             self.update_output(node.id,-1)
     def reset_touches(self):
@@ -435,7 +442,7 @@ class MyScene(scene.Scene):
             self.framecount=0
             self.background_color='white'
             self.Eprom= ICNode(pins=Eprom.pins, position=(54,385), size=(145,320), anchor_point=(0,0), color='white', parent=self)     
-            self.message=scene.LabelNode(position=(230,0), anchor_point=(0,0),  text='messagebox '*5,font=('Courier',16),parent=self,color='black')
+            self.message=scene.LabelNode(position=(220,0), anchor_point=(0,0),  text='messagebox '*5,font=('Courier',16),parent=self,color='black')
             self.messagetext=''
     def touch_began(self,touch): 
        for node in self.children:
@@ -663,7 +670,7 @@ class Demo:
     self.sv.scene.Eprom.updatePins(self.Eprom.activePins)
     ad_index=advent_map2.get(self.index)
     ad_description=advent_room_descriptions.get(advent_map2.get(self.index))
-    self.sv.scene.messagetext=f'{self.index:3d} {self.index:08b}'+(f' {ad_index:3d} {ad_description}'if ad_index else '')
+    self.sv.scene.messagetext=f'{self.Eprom.key() if self.Eprom.key()!=None else -6:2d} {advent_keymapping.get(self.Eprom.key())  or "":2s} {self.index:3d} {self.index:08b}'+(f' {ad_index:3d} {ad_description}'if ad_index else '')
     try:
       t,i,item=self.q.get_nowait()
       if t>atTime:
