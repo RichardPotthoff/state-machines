@@ -17,7 +17,7 @@ advent_room_descriptions.update({1000:'Select Game: "E"=maze, "N"=Casino',
 4000:"CASINO. ROLL THE DICE (PUT)",
 4001:'YOU GOT A "1". YOU NEED A "6". TRY AGAIN.',
 4002:'YOU GOT A "2". YOU NEED A "6". TRY AGAIN.',
-4003:'YOU GOT A "3". THE CODE IS: "SENDPUT"',
+4003:'YOU GOT A "3". THE CODE IS: "SETUP"',
 4004:'YOU GOT A "4". YOU NEED A "6". TRY AGAIN.',
 4005:'YOU GOT A "5". YOU NEED A "6". TRY AGAIN.',
 4006:'YOU GOT A "6". YOU WIN! TAKE YOUR WINNINGS.',
@@ -34,17 +34,14 @@ advent_room_descriptions.update({1000:'Select Game: "E"=maze, "N"=Casino',
 4026:'ENTER THE 3RD LETTER OF THE CODE.',
 4025:'ENTER THE 4TH LETTER OF THE CODE.',
 4024:'ENTER THE NEXT LETTER OF THE CODE.',
-4023:'ENTER THE NEXT LETTER OF THE CODE.',
-4022:'ENTER THE NEXT LETTER OF THE CODE.',
-4021:'YOU HAVE ENTERED THE CORRECT CODE. THE VAULT IS NOW OPEN.',
-4020:'YOU INSIDE THE VAULT, THE DOOR CLOSES BEHIND YOU.',
+4023:'YOU HAVE ENTERED THE CORRECT CODE. THE VAULT IS NOW OPEN.',
+4022:'YOU ARE NOW INSIDE THE VAULT. THE DOOR CLOSES BEHIND YOU.',
 4037:'#1 CORRECT. ENTER THE 2ND LETTER OF THE CODE',
 4036:'ENTER THE 3RD LETTER OF THE CODE.',
 4035:'ENTER THE 4TH LETTER OF THE CODE.',
 4034:'ENTER THE NEXT LETTER OF THE CODE.',
-4033:'ENTER THE NEXT LETTER OF THE CODE.',
-4032:'ENTER THE NEXT LETTER OF THE CODE.',
-4031:'YOU HAVE ENTERED THE CORRECT CODE. THE VAULT IS NOW OPEN',})
+4033:'YOU HAVE ENTERED THE CORRECT CODE. THE VAULT IS NOW OPEN.'
+})
 
 advent_map={ 29: 61, 156:132,  20:133, 149:1000,
             153:107,  24:135, 144:136,  17:1061,
@@ -92,24 +89,18 @@ advent_edges.append((4007,'S', 4027))
 advent_edges.append((4027,'W', 4007))
 advent_edges.append((4027,'E', 4026))
 advent_edges.append((4026,'_', 4027))
-advent_edges.append((4026,'N', 4025))
+advent_edges.append((4026,'T', 4025))
 advent_edges.append((4025,'_', 4026))
-advent_edges.append((4025,'D', 4024))
+advent_edges.append((4025,'U', 4024))
 advent_edges.append((4024,'_', 4025))
 advent_edges.append((4024,'P', 4023))
 advent_edges.append((4023,'_', 4024))
-advent_edges.append((4023,'U', 4022))
-advent_edges.append((4022,'_', 4025))
-advent_edges.append((4022,'T', 4021))
-advent_edges.append((4021,'_', 4026))
 advent_edges.append((4037,'W', 4007))
 advent_edges.append((4036,'W', 4027))
 advent_edges.append((4035,'W', 4026))
 advent_edges.append((4034,'W', 4025))
 advent_edges.append((4033,'W', 4024))
-advent_edges.append((4032,'W', 4025))
-advent_edges.append((4031,'W', 4026))
-advent_edges.append((4021,'E', 4020))
+advent_edges.append((4023,'E', 4022))
 
 #advent_edges.append((4001,'__', 4002))
 #advent_edges.append((4002,'__', 4003))
@@ -279,6 +270,9 @@ class Eprom1(Eprom):
             newdata=advent_imap.get(room_actions.get('__'))
             if newdata!=None:
               data=newdata
+              if (count_bits(data)&1)==1: 
+                data^=1<<7
+
       elif action and room_actions:
         newroom=room_actions.get(action)
         if newroom==None:
@@ -286,9 +280,14 @@ class Eprom1(Eprom):
         newdata=advent_imap.get(newroom)
         if newdata!=None:
           data=newdata
+          if (count_bits(data)&1)==0: 
+            data^=1<<7
       else:
           if key==25: #reset, 3-key combination, e.g. {7,0,6}
-            data=149^128             
+            data=149^128      
+          elif key in (7,0):
+            if (count_bits(data)&1)==0: 
+              data^=1<<7 
       flipped_bits=data^olddata
       if flipped_bits.bit_length()>1:
         for i in range(8):
@@ -351,7 +350,24 @@ class keyNode(scene.ShapeNode):
         stroke_width=radius*0.1
       path.line_width=stroke_width
       super().__init__(path=path,fill_color=fill_color,stroke_color=stroke_color,*args,**kwargs)
-      self.label=scene.LabelNode(position=(0,0), anchor_point=(0.5,0.5), text=title,font=('Helvetica',radius*(0.8 if (len(title)>1) else 1)) ,parent=self,color=stroke_color)
+      titlelines=title.split('\n')
+      for i,titleline in enumerate(titlelines):
+        fontsize=radius*(0.8 if (len(title)>1) else 1)
+        y=((len(titlelines)-1)/2-i)*fontsize
+        if len(titlelines)>1: y-=fontsize*0.2
+        if titleline[0]=='{':
+          titleline=titleline.strip('{}')
+          color='green'
+          if len(titlelines)>1:fontsize*=0.8
+        elif titleline[0]=='[':
+          titleline=titleline.strip('[]')
+          color='darkred'
+          if len(titlelines)>1:fontsize*=0.8
+        else:
+          color=stroke_color
+          if (len(titleline)==1) and (len(titlelines)>1):
+            fontsize/=0.8
+        self.label=scene.LabelNode(position=(0,y), anchor_point=(0.5,0.5), text=titleline,font=('Helvetica',fontsize) ,parent=self,color=color)
       self.id=id
     @property
     def title(self):
@@ -516,7 +532,7 @@ class Demo:
       orientation=((0,-1),(1,0),),
       on_output_change=self.keypad_output_changed)
     self.keypad3=keypadNode(radius=150,position=(122,150),
-      keytitles=['Put','N','E','U','Take','D','Ctrl','W','S','Alt'], on_output_change=self.keypad_output_changed)
+      keytitles=['Put\n{NE}','N','E','[NW]\nU','Take\n{SW}','D\n{SE}','[Ctrl]','W','S','{Alt}'], on_output_change=self.keypad_output_changed)
     scene.LabelNode(position=(-30,-120), anchor_point=(0,0), text='Reset: [Ctrl Alt D]',font=('Helvetica',15),parent=self.keypad3,color='black')
     self.mode=0
     self.key=''
