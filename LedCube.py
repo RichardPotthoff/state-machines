@@ -36,7 +36,8 @@ advent_room_descriptions.update({1000:'Select Game: "E"=maze, "N"=Casino',
 4024:'ENTER THE NEXT LETTER OF THE CODE.',
 4023:'ENTER THE NEXT LETTER OF THE CODE.',
 4022:'ENTER THE NEXT LETTER OF THE CODE.',
-4021:'YOU HAVE ENTERED THE CORRECT CODE. THE VAULT IS NOW OPEN',
+4021:'YOU HAVE ENTERED THE CORRECT CODE. THE VAULT IS NOW OPEN.',
+4020:'YOU INSIDE THE VAULT, THE DOOR CLOSES BEHIND YOU.',
 4037:'#1 CORRECT. ENTER THE 2ND LETTER OF THE CODE',
 4036:'ENTER THE 3RD LETTER OF THE CODE.',
 4035:'ENTER THE 4TH LETTER OF THE CODE.',
@@ -108,7 +109,7 @@ advent_edges.append((4034,'W', 4025))
 advent_edges.append((4033,'W', 4024))
 advent_edges.append((4032,'W', 4025))
 advent_edges.append((4031,'W', 4026))
-
+advent_edges.append((4021,'E', 4020))
 
 #advent_edges.append((4001,'__', 4002))
 #advent_edges.append((4002,'__', 4003))
@@ -182,6 +183,23 @@ class Eprom(IC):
         }
   outputpins=datapins=frozenset(key for key,value in pins.items() if value.output)
   inputpins=addresspins=frozenset(key for key,value in pins.items() if value.input)
+  def __init__(self):
+    super().__init__()
+  def setPin(self,pin,value=1):
+    if value:
+      self.activePins.add(pin)
+    else:
+      self.activePins.discard(pin)
+#    print(self.activePins)
+  def clearPin(self,pin):
+    self.setPin(pin,0)
+#    self.activePins.discard(pin)
+#    print(self.activePins)
+  def pinStatus(self,pin):
+    return pin in self.activePins
+
+class Eprom1(Eprom):
+  KeypadPins=frozenset((23,24,25,26,27))
   keypadLookupTable={
        frozenset(()):None,
        frozenset((27,)):-1,
@@ -204,29 +222,12 @@ class Eprom(IC):
        frozenset((23,24,25,26)):20,
        frozenset((23,24,25,26,27)):25,
        }  
-  def __init__(self):
-    super().__init__()
-  def setPin(self,pin,value=1):
-    if value:
-      self.activePins.add(pin)
-    else:
-      self.activePins.discard(pin)
-#    print(self.activePins)
-  def clearPin(self,pin):
-    self.setPin(pin,0)
-#    self.activePins.discard(pin)
-#    print(self.activePins)
-  def pinStatus(self,pin):
-    return pin in self.activePins
-
-class Eprom1(Eprom):
-  KeypadPins=frozenset((23,24,25,26,27))
+  pinsForKeys={key:pins for pins,key in keypadLookupTable.items()}
   def __init__(self):
     super().__init__()
   def run(self):
     self.activePins-=self.pins_from_data(255)
-    self.activePins|=self.pins_from_data(self.data_from_address(self.address_from_pins(self.activePins)))
-    
+    self.activePins|=self.pins_from_data(self.data_from_address(self.address_from_pins(self.activePins)))   
   def data_from_address(self,address):   
     mode=2*((address>>12)&1)+((address>>10)&1)
     if mode in (0,2):
@@ -241,17 +242,18 @@ class Eprom1(Eprom):
             cyclelength=1<<(max(0,(olddata&127).bit_length()-1))
         else:
            cyclelength=128
-        if key >=0 and key<=9:
-          if   key==7: data^=1<<7
-          elif key==0: data^=1<<6
-          elif key==3: data^=1<<(3 if ((data>>3^data)&1<<0) else 0)
-          elif key==8: data^=1<<(0 if ((data>>3^data)&1<<0) else 3)
-          elif key==2: data^=1<<(4 if ((data>>3^data)&1<<1) else 1)
-          elif key==9: data^=1<<(1 if ((data>>3^data)&1<<1) else 4)
-          elif key==4: data^=1<<(5 if ((data>>3^data)&1<<2) else 2)
-          elif key==6: data^=1<<(2 if ((data>>3^data)&1<<2) else 5)
-          elif key==1: data=(intToGray((grayToInt(data&(cyclelength-1))+1)%cyclelength))|(data&128)
-          elif key==5: data=(intToGray((grayToInt(data&(cyclelength-1))-1)%cyclelength))|(data&128)
+        if key!=None:
+          if key>=0 and key<=9:
+            if   key==7: data^=1<<7
+            elif key==0: data^=1<<6
+            elif key==3: data^=1<<(3 if ((data>>3^data)&1<<0) else 0)
+            elif key==8: data^=1<<(0 if ((data>>3^data)&1<<0) else 3)
+            elif key==2: data^=1<<(4 if ((data>>3^data)&1<<1) else 1)
+            elif key==9: data^=1<<(1 if ((data>>3^data)&1<<1) else 4)
+            elif key==4: data^=1<<(5 if ((data>>3^data)&1<<2) else 2)
+            elif key==6: data^=1<<(2 if ((data>>3^data)&1<<2) else 5)
+            elif key==1: data=(intToGray((grayToInt(data&(cyclelength-1))+1)%cyclelength))|(data&128)
+            elif key==5: data=(intToGray((grayToInt(data&(cyclelength-1))-1)%cyclelength))|(data&128)
         if mode==2:
           bitmask=(cyclelength-1)|64|128
           data=(data&bitmask)|(olddata&(bitmask^255))
@@ -283,12 +285,16 @@ class Eprom1(Eprom):
           newroom=room_actions.get('_')#default action
         newdata=advent_imap.get(newroom)
         if newdata!=None:
-          if (count_bits(newdata)&1)==0:
-              newdata=newdata^128       
           data=newdata
       else:
           if key==25: #reset, 3-key combination, e.g. {7,0,6}
-            data=149^128
+            data=149^128             
+      flipped_bits=data^olddata
+      if flipped_bits.bit_length()>1:
+        for i in range(8):
+          if flipped_bits&(1<<i):
+            data=olddata^(1<<i) # change only one bit at a time
+            break
     else:
       data=0 # data will be inverted -> data^255 = 255 (empty ROM)
     return data
@@ -382,7 +388,7 @@ class keypadNode(scene.ShapeNode):
         if (self.output[i]==0) and (inc==-1):
           if self.on_output_change:
             self.on_output_change(i,0)
-        if (self.output[i]==1) and (inc==1):
+        if (self.output[i]==1) and (inc==1): 
           if self.on_output_change:
             self.on_output_change(i,1)
     def touch_began(self, touch):
@@ -575,6 +581,7 @@ class Demo:
           self.led_nodes[i][j][k].setPosition((x,y,z))
           self.led_nodes[i][j][k].eulerAngles=(0.61547970867039,0,math.pi/4)
     self.index=0
+    self.oldindex=0
     constraint = scn.LookAtConstraint(self.root_node)#(self.sphere_nodes[2][2][2])    
     constraint.gimbalLockEnabled = True
     self.camera_node.constraints = constraint
@@ -624,7 +631,7 @@ class Demo:
       self.wire_nodes[0][((3,1,2,0),(0,2,1,3))[iy//2][iz]][iz].setGeometry(ywire)
       return #update_Led()
       
-    update_Led(self.index,on=False) 
+    update_Led(self.oldindex,on=False) 
     self.Eprom.activePins-=self.Eprom.pins_from_address(255)
     self.Eprom.activePins|=self.Eprom.pins_from_address(self.index)
     if self.mode==0:
@@ -636,6 +643,7 @@ class Demo:
       self.Eprom.run()
       self.index=self.Eprom.data_from_pins(self.Eprom.activePins)
     update_Led(self.index) 
+    self.oldindex=self.index
     self.sv.scene.Eprom.updatePins(self.Eprom.activePins)
     ad_index=advent_map2.get(self.index)
     ad_description=advent_room_descriptions.get(advent_map2.get(self.index))
@@ -654,7 +662,7 @@ class Demo:
       self.q.task_done()
     except:
       pass
-            
+    
   def rbutton_tapped(self,sender):
     self.mode=sender.selected_index
     if self.mode==0:
@@ -674,10 +682,8 @@ class Demo:
       self.setPin(self.switch1)
       self.switch2.value=1
       self.setPin(self.switch2)
-      for i in range(5):
-          self.keypad_output_changed(i,1)#reset, start at game selection (simulate ["shift" "rst" "D"])
-      for i in range(5):
-          self.keypad_output_changed(i,0)
+      def setindex(self,index): self.index=index; yield
+      self.q.put((0,next(id),setindex(self,149)))
       self.keypad1.remove_from_parent()
       self.keypad2.remove_from_parent()
       self.sv.scene.add_child(self.keypad3)
