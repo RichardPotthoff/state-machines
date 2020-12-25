@@ -23,6 +23,55 @@ advent_room_descriptions.update({1000:'Select Game: "E"=maze, "N"=Casino',
 1061:"YOU DROPPED THE BATTERIES. WEST END OF LONG HALL.",
 140:"DEAD END. THERE IS A VENDING MACHINE. PUT COINS IN TO GET BATTERIES.",
 2140:"DEAD END. YOU NOW HAVE FRESH BATTERIES.",
+0:"None"
+})
+
+advent_map={ 29: 134 ,156:136,  20:138,  149:1000,
+            153: 139,  24:137, 144:112,  17:140,
+             27: 132, 154:133,  18:135,   147:1998, 
+            159:1988,  30:131, 150:107,  23:61,
+             }
+
+advent_map.update({147^128:1999,159^128:1989,27^128:1132,18^128:1135})
+advent_map.update({id^(128|64):room+2000 for id,room in advent_map.items()})#the "blinking" rooms
+advent_edges=[(61, 'S', 107), (107, 'D', 61), (107, 'S', 131), (107, 'U', 135), (107, 'W', 138), (112, 'SE', 135), (112, 'W', 137), (112, 'D', 138), (112, 'S', 140), (131, 'W', 107), (131, 'NW', 133), (131, 'U', 136), (132, 'N', 133), (132, 'D', 139), (133, 'D', 131), (133, 'W', 132), (133, 'SW', 135), (133, 'N', 137), (134, 'D', 136), (134, 'W', 139), (135, 'N', 107), (135, 'U', 112), (135, 'S', 133), (136, 'W', 131), (136, 'D', 134), (136, 'NW', 137), (136, 'SE', 138), (137, 'W', 112), (137, 'D', 133), (137, 'N', 136), (137, 'E', 139), (138, 'D', 107), (138, 'NW', 112), (138, 'S', 136), (139, 'E', 132), (139, 'N', 134), (139, 'U', 137), (140, 'N', 112)]
+
+advent_edges=(advent_edges +
+             [(room1+2000,action,room2+2000) for room1,action,room2 in advent_edges if not ((room1==107) and (room2==61))])#"blinking" edges
+
+advent_edges.append((1000,'E',61))
+advent_edges.append((2107,'D',2061))
+advent_edges.append((140,'P',2140))
+advent_edges.append((2061,'P', 61))
+advent_edges.append((1061,'S', 107))
+
+
+#advent_edges.append(( 132,'U',1988))
+advent_edges.append(( 132,'S',1988))
+#advent_edges.append(( 131,'SE',1988))
+advent_edges.append(( 131,'SW',1988))
+advent_edges.append(( 134,'N',1988))
+advent_edges.append(( 134,'NW',1988))
+advent_edges.append(( 1989,'_', 132))
+advent_edges.append(( 1988,'__',132))
+#advent_edges.append(( 1989,'U',131))
+advent_edges.append(( 1989,'S',134))
+advent_edges.append(( 1989,'NW',132))
+advent_edges.append(( 1989,'N',131))
+advent_edges.append(( 1989,'SW',134))
+#advent_edges.append(( 1989,'SE',132))
+
+
+#advent_edges.append(( 132,'W',1998))
+#advent_edges.append((1998,'W',1999))
+#advent_edges.append((1999,'W',1135))
+#advent_edges.append(( 135,'D',1998))
+#advent_edges.append((1198,'D',1999))
+#advent_edges.append((1999,'D',132))
+#advent_edges.append((1998,'__', 132))
+
+#Casino: Dice('Put'), Code entry('E'), Direct Addressing ('D')
+advent_room_descriptions.update({
 4000:"CASINO. ROLL THE DICE (PUT)",
 4001:'YOU GOT A "1". YOU NEED A "6". TRY AGAIN.',
 4002:'YOU GOT A "2". YOU NEED A "6". TRY AGAIN.',
@@ -31,7 +80,7 @@ advent_room_descriptions.update({1000:'Select Game: "E"=maze, "N"=Casino',
 4005:'YOU GOT A "5". YOU NEED A "6". TRY AGAIN.',
 4006:'YOU GOT A "6". YOU WIN! TAKE YOUR WINNINGS.',
 4007:'CASINO VAULT. ENTER THE CODE. (ROLL THE DICE TO GET THE CODE)',
-4010:'THE DICE ARE ROLLING.',
+4010:'YOU HAVE TAKEN IT.',
 4011:'THE DICE ARE ROLLING.',
 4012:'THE DICE ARE ROLLING.',
 4013:'THE DICE ARE ROLLING.',
@@ -52,10 +101,7 @@ advent_room_descriptions.update({1000:'Select Game: "E"=maze, "N"=Casino',
 4033:'YOU HAVE ENTERED THE CORRECT CODE. THE VAULT IS NOW OPEN.'
 })
 
-advent_map={ 29: 61, 156:132,  20:133, 149:1000,
-            153:107,  24:135, 144:136,  17:1061,
-            159:131,  30:139, 150:112,  23:140,
-             27:138, 154:134,  18:137, 
+advent_map.update({
                 5:4000, 132:4006,  12:4005, 141:4004,
                15:4003, 142:4002,   6:4001, 135:4007,
               133:4010,   4:4016, 140:4015,  13:4014,
@@ -63,18 +109,11 @@ advent_map={ 29: 61, 156:132,  20:133, 149:1000,
               129:4020,   0:4021, 136:4022,   9:4023,
               139:4024,  10:4025, 130:4026,   3:4027,
                 1:4030, 128:4031,   8:4032, 137:4033,
-               11:4034, 138:4035,   2:4036, 131:4037,}
+               11:4034, 138:4035,   2:4036, 131:4037,
+                 })
 
-advent_map.update({id^(128|64):room+2000 for id,room in advent_map.items()})#the "blinking" rooms
-advent_edges=[(61, 'S', 107), (107, 'D', 61), (133, 'S', 112), (112, 'E', 133), (133, 'W', 132), (132, 'N', 133), (135, 'N', 107), (107, 'U', 135), (135, 'D', 132), (132, 'W', 135), (135, 'E', 134), (134, 'E', 135), (135, 'W', 136), (136, 'S', 135), (137, 'W', 112), (112, 'W', 137), (137, 'U', 134), (134, 'S', 137), (138, 'D', 107), (107, 'W', 138), (138, 'E', 131), (131, 'N', 138), (138, 'W', 134), (134, 'U', 138), (139, 'E', 132), (132, 'D', 139), (139, 'N', 134), (134, 'W', 139), (140, 'N', 112), (112, 'S', 140)]
-advent_edges=(advent_edges +
-             [(room1+2000,action,room2+2000) for room1,action,room2 in advent_edges if not ((room1==107) and (room2==61))])#"blinking" edges
-advent_edges.append((1000,'E',61))
-advent_edges.append((2107,'D',3061))
-advent_edges.append((140,'P',2140))
-advent_edges.append((3061,'P',1061))
-advent_edges.append((1061,'S', 107))
 advent_edges.append((1000,'N', 4000))
+advent_edges.append((4000,'T', 4000))
 advent_edges.append((4000,'P', 4010))
 advent_edges.append((4010,'P', 4006))
 advent_edges.append((4011,'P', 4002))
@@ -110,12 +149,12 @@ advent_edges.append((4034,'W', 4025))
 advent_edges.append((4033,'W', 4024))
 advent_edges.append((4023,'E', 5201))
 
-advent_keymapping={1:'P', 2:'N', 3:'E', 4:'U', 5:'T', 6:'D', 7:'C', 8:'W', 9:'S', 0:'A',
+advent_keymapping={1:'P', 2:'N', 3:'E', 4:'U', 5:'T', 6:'D', 7:None, 8:'W', 9:'S', 0:None,
                    10:'NW', 14:'SW', 16:'^T', 17:'SE', 18:'NE', 19:'^P',}
 keynames=list(advent_keymapping.values())
 advent_room_descriptions.update({5000+i+j+64:f'Room {keyname} {"(pushed)" if count_bits(i+j+64)&1 else "(released)"}' for i,keyname in enumerate(keynames) for j in (0,128)})
 advent_map.update({i+j+64:5000+i+j+64 for i in range(len(keynames)) for j in (0,128)})
-advent_edges+=[(room1,action,room2) for i in range(len(keynames)) for j in (0,128) for k,action in enumerate(keynames) for room1,room2 in ((5000+i+j+64,5000+k+64),) if not action in ('A','C')]
+advent_edges+=[(room1,action,room2) for i in range(len(keynames)) for j in (0,128) for k,action in enumerate(keynames) for room1,room2 in ((5000+i+j+64,5000+k+64),) if not action in ('A','C',)]
 advent_edges.append((4000,'D',5069))
 advent_map2={i^128:room for i,room in advent_map.items()}
 advent_map2.update(advent_map)
@@ -281,12 +320,12 @@ class Eprom1(Eprom):
         newdata=advent_imap.get(newroom)
         if newdata!=None:
           data=newdata
-          if (count_bits(data)&1)==0: 
+          if ((count_bits(data)&1)==0):# and ((count_bits(olddata)&1)!=0): 
             data^=1<<7
       else:
           if key==25: #reset, 3-key combination, e.g. {7,0,6}
             data=149^128      
-          elif key in (7,0):
+          elif key in ():#flip msb
             if (count_bits(data)&1)==0: 
               data^=1<<7 
       flipped_bits=data^olddata
@@ -387,7 +426,7 @@ class keypadNode(scene.ShapeNode):
       if not keytitles:
         keytitles=[f'{i}' for i in range(10)]
       self.keys=[keyNode(
-          position=(x*orientation[0][0]+y*orientation[0][1],x*orientation[1][0]+y*orientation[1][1]),
+          position=self.size/2+(x*orientation[0][0]+y*orientation[0][1],x*orientation[1][0]+y*orientation[1][1]),
           title=keytitles[id],
           id=id,
           parent=self)
@@ -441,8 +480,8 @@ class MyScene(scene.Scene):
             self.did_change_size()
             self.framecount=0
             self.background_color='white'
-            self.Eprom= ICNode(pins=Eprom.pins, position=(54,385), size=(145,320), anchor_point=(0,0), color='white', parent=self)     
-            self.message=scene.LabelNode(position=(220,0), anchor_point=(0,0),  text='messagebox '*5,font=('Courier',16),parent=self,color='black')
+            self.Eprom= ICNode(pins=Eprom.pins, position=(54,435), size=(145,320), anchor_point=(0,0), color='white', parent=self)     
+            self.message=scene.LabelNode(position=(5,5), anchor_point=(0,0),  text='messagebox '*5,font=('Courier-Bold',20),parent=self,color='black')
             self.messagetext=''
     def touch_began(self,touch): 
        for node in self.children:
@@ -521,24 +560,25 @@ class Demo:
     self.sv.multi_touch_enabled = True
     self.sv.shows_fps = True
     self.sv.bg_color=(1,1,1,1)
-    self.view1=ui.View(frame=(256+768-730,0,730,730))
+    v1width=650
+    self.view1=ui.View(frame=(256+768-v1width,0,v1width,v1width))
     self.messagetext=''
-    self.rbtn1=ui.SegmentedControl(frame=(30.0,417.0,204.0,34.0),segments=('auto','xyz','123','maze'),action= self.rbutton_tapped)
-    self.switch1=ui.Switch(frame=(6.0,84.0,51.0,31.0),action=self.setPin)
+    self.rbtn1=ui.SegmentedControl(frame=(5.0,340.0,204.0,34.0), segments=('auto','xyz','123','maze'), action= self.rbutton_tapped)
+    self.switch1=ui.Switch(frame=(6.0,34.0,51.0,31.0),action=self.setPin)
     self.switch1.targetPin=2
-    self.switch2=ui.Switch(frame=(197,217,51.0,31.0),action=self.setPin)
+    self.switch2=ui.Switch(frame=(197,167,51.0,31.0),action=self.setPin)
     self.switch2.targetPin=21
     self.sv.add_subview(self.view1)
     self.sv.add_subview(self.rbtn1)
     self.sv.add_subview(self.switch1)
-    self.sv.scene.view.add_subview(self.switch2)
-    self.keypad1=keypadNode(position=(122,150),
+    self.sv.add_subview(self.switch2)
+    self.keypad1=keypadNode(scale=1.15,radius=150,position=(15,35),anchor_point=(0,0),
       keytitles=['inc','y','X','Z','dec','z','r/g','x','Y','../_'], on_output_change=self.keypad_output_changed)
-    self.keypad2=keypadNode(position=(135,132),
+    self.keypad2=keypadNode(scale=1.15,radius=150,position=(15,35),anchor_point=(0,0),
       keytitles=['1','2','3','4','5','6','7','8','9','0'],
       orientation=((0,-1),(1,0),),
       on_output_change=self.keypad_output_changed)
-    self.keypad3=keypadNode(radius=150,position=(122,150),
+    self.keypad3=keypadNode(scale=1.15,radius=150,position=(15,35),anchor_point=(0,0),
       keytitles=['Put\n{NE}','N','E','[NW]\nU','Take\n{SW}','D\n{SE}','[Ctrl]','W','S','{Alt}'], on_output_change=self.keypad_output_changed)
     scene.LabelNode(position=(-30,-120), anchor_point=(0,0), text='Reset: [Ctrl Alt D]',font=('Helvetica',15),parent=self.keypad3,color='black')
     self.mode=0
@@ -555,7 +595,7 @@ class Demo:
     self.camera_node = scn.Node()
     self.camera_node.camera = scn.Camera()
     self.camera_node.position = (-10,1.5,2)
-    self.camera_node.camera.focalLength=60
+    self.camera_node.camera.focalLength=70
     self.root_node.addChildNode(self.camera_node)    
     self.origin_node = scn.Node()
     self.root_node.addChildNode(self.origin_node)    
@@ -670,7 +710,7 @@ class Demo:
     self.sv.scene.Eprom.updatePins(self.Eprom.activePins)
     ad_index=advent_map2.get(self.index)
     ad_description=advent_room_descriptions.get(advent_map2.get(self.index))
-    self.sv.scene.messagetext=f'{self.Eprom.key() if self.Eprom.key()!=None else -6:2d} {advent_keymapping.get(self.Eprom.key())  or "":2s} {self.index:3d} {self.index:08b}'+(f' {ad_index:3d} {ad_description}'if ad_index else '')
+    self.sv.scene.messagetext=f'{self.Eprom.key() if self.Eprom.key()!=None else -6:2d}\n'+ f'{advent_keymapping.get(self.Eprom.key())  or "":2s}\n{self.index:3d}\n{self.index:08b}\n'+(f'{ad_index:3d} {ad_description}'if ad_index else '')
     try:
       t,i,item=self.q.get_nowait()
       if t>atTime:
