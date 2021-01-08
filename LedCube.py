@@ -149,12 +149,12 @@ advent_edges.append((4034,'W', 4025))
 advent_edges.append((4033,'W', 4024))
 advent_edges.append((4023,'E', 5201))
 
-advent_keymapping={1:'P', 2:'N', 3:'E', 4:'U', 5:'T', 6:'D', 7:None, 8:'W', 9:'S', 0:None,
+advent_keymapping={1:'P', 2:'N', 3:'E', 4:'U', 5:'T', 6:'D', 7:'C', 8:'W', 9:'S', 0:'A',
                    10:'NW', 14:'SW', 16:'^T', 17:'SE', 18:'NE', 19:'^P',}
 keynames=list(advent_keymapping.values())
 advent_room_descriptions.update({5000+i+j+64:f'Room {keyname} {"(pushed)" if count_bits(i+j+64)&1 else "(released)"}' for i,keyname in enumerate(keynames) for j in (0,128)})
 advent_map.update({i+j+64:5000+i+j+64 for i in range(len(keynames)) for j in (0,128)})
-advent_edges+=[(room1,action,room2) for i in range(len(keynames)) for j in (0,128) for k,action in enumerate(keynames) for room1,room2 in ((5000+i+j+64,5000+k+64),) if not action in ('A','C',)]
+advent_edges+=[(room1,action,room2) for i in range(len(keynames)) for j in (0,128) for k,action in enumerate(keynames) for room1,room2 in ((5000+i+j+64,5000+k+64),) if not action in ()]
 advent_edges.append((4000,'D',5069))
 advent_map2={i^128:room for i,room in advent_map.items()}
 advent_map2.update(advent_map)
@@ -315,12 +315,12 @@ class Eprom1(Eprom):
 
       elif action and room_actions:
         newroom=room_actions.get(action)
-        if newroom==None:
+        if (newroom==None) and not action in ('A','C'):#don't do default action for Alt or Ctrl'
           newroom=room_actions.get('_')#default action
         newdata=advent_imap.get(newroom)
         if newdata!=None:
           data=newdata
-          if ((count_bits(data)&1)==0):# and ((count_bits(olddata)&1)!=0): 
+          if ((count_bits(data)&1)==0):
             data^=1<<7
       else:
           if key==25: #reset, 3-key combination, e.g. {7,0,6}
@@ -481,7 +481,7 @@ class MyScene(scene.Scene):
             self.framecount=0
             self.background_color='white'
             self.Eprom= ICNode(pins=Eprom.pins, position=(54,435), size=(145,320), anchor_point=(0,0), color='white', parent=self)     
-            self.message=scene.LabelNode(position=(5,5), anchor_point=(0,0),  text='messagebox '*5,font=('Courier-Bold',20),parent=self,color='black')
+            self.message=scene.LabelNode(scale=1.0,position=(5,5), anchor_point=(0,0),  text='messagebox '*5,font=('Courier-Bold',20),parent=self,color='black')
             self.messagetext=''
     def touch_began(self,touch): 
        for node in self.children:
@@ -710,7 +710,7 @@ class Demo:
     self.sv.scene.Eprom.updatePins(self.Eprom.activePins)
     ad_index=advent_map2.get(self.index)
     ad_description=advent_room_descriptions.get(advent_map2.get(self.index))
-    self.sv.scene.messagetext=f'{self.Eprom.key() if self.Eprom.key()!=None else -6:2d}\n'+ f'{advent_keymapping.get(self.Eprom.key())  or "":2s}\n{self.index:3d}\n{self.index:08b}\n'+(f'{ad_index:3d} {ad_description}'if ad_index else '')
+    self.sv.scene.messagetext=f'{self.Eprom.key() if self.Eprom.key()!=None else -6:2d}\n'+ f'{advent_keymapping.get(self.Eprom.key())  or "":2s}\n{self.index:3d}\n{self.index:08b}\n'+(f'{ad_index:3d} {ad_description.lower()}'if ad_index and ad_description else '')
     try:
       t,i,item=self.q.get_nowait()
       if t>atTime:
