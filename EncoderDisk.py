@@ -9,7 +9,7 @@ def circle(r,eps=0.05):
   y=[r*sin(da*i) for i in range(n+1)]
   return(x,y,)
   
-def plotEncoderDisk(r=60,dr=3,n=100,phase=-1/4,labels=True,saveas=None,bits=1,xmin=-100,xmax=100):
+def plotEncoderDisk(r=60,dr=3,n=100,phase=-1/4,labels=True,tickmarks=True,saveas=None,bits=1,xmin=-100,xmax=100):
   def plot_ring(ax,r,dr,n,phase=0):
     da=2*pi/n
     m=int((da*r/0.6)+0.5)
@@ -27,16 +27,18 @@ def plotEncoderDisk(r=60,dr=3,n=100,phase=-1/4,labels=True,saveas=None,bits=1,xm
     ni/=2
   ro=r+dr*bits
   ax.plot(*circle(ro), 'k',lw=1)
-  if labels:
+  if labels or tickmarks:
     n4=n*4
     da=2*pi/n4
     for i in range(n4):
       a=-da*(i+0.5)
       ca=cos(a)
       sa=sin(a)
-      ax.plot(*[[r1*cs for r1 in(ro+dr/2,ro+dr,)] for cs in(ca,sa,)],'k',lw=1)
-      ax.plot(*[[r1*cs for r1 in(r-dr/2,r-dr,)] for cs in(ca,sa,)],'k',lw=1)
-      ax.text((ro+1.2*dr)*ca,(ro+1.2*dr)*sa,f'{i}',rotation=a/pi*180,rotation_mode='anchor',va='center',ha='left', fontsize=6)
+      if tickmarks:
+        ax.plot(*[[r1*cs for r1 in(ro+dr/2,ro+dr,)] for cs in(ca,sa,)],'k',lw=1)
+        ax.plot(*[[r1*cs for r1 in(r-dr/2,r-dr,)] for cs in(ca,sa,)],'k',lw=1)
+      if labels:
+        ax.text((ro+1.2*dr)*ca,(ro+1.2*dr)*sa,f'{i}',rotation=a/pi*180,rotation_mode='anchor',va='center',ha='left', fontsize=6)
 
   ax.plot(*circle(15/2), 'k',lw=1)
   ax.plot(*circle(35.5/2), 'k',lw=1)
@@ -54,5 +56,5 @@ def plotEncoderDisk(r=60,dr=3,n=100,phase=-1/4,labels=True,saveas=None,bits=1,xm
     plt.savefig(filename+ext, papertype = 'a4', orientation = 'portrait', format = ext.lstrip('.'))
   plt.close()
   
-plotEncoderDisk(r=60.5, n=64, bits=7, phase=-1/4,labels=False,saveas='EncDisk256')
-plotEncoderDisk(r=60.5, n=64, bits=7, phase=-1/4,labels=True,saveas='EncDisk256_lbl')
+plotEncoderDisk(r=60.5, n=64, bits=7, phase=-1/4,labels=False,tickmarks=True,saveas='EncDisk256')
+plotEncoderDisk(r=60.5, n=64, bits=7, phase=-1/4,labels=True,tickmarks=True,saveas='EncDisk256_lbl')
