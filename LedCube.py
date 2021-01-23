@@ -31,6 +31,11 @@ advent_map={ 29: 134 ,156:136,  20:138,  149:1000,
              27: 132, 154:133,  18:135,   147:1998, 
             159:1988,  30:131, 150:107,  23:61,
              }
+advent_map={0b00_011_101: 134, 0b10_011_100: 136, 0b00_010_100: 138, 0b10_010_101:1000, 
+            0b10_011_001: 139, 0b00_011_000: 137, 0b10_010_000: 112, 0b00_010_001: 140, 
+            0b00_011_011: 132, 0b10_011_010: 133, 0b00_010_010: 135, 0b10_010_011:1998, 
+            0b10_011_111:1988, 0b00_011_110: 131, 0b10_010_110: 107, 0b00_010_111:  61,
+            }
 
 advent_map.update({147^128:1999,159^128:1989,27^128:1132,18^128:1135})
 advent_map.update({id^(128|64):room+2000 for id,room in advent_map.items()})#the "blinking" rooms
@@ -154,7 +159,7 @@ advent_keymapping={1:'P', 2:'N', 3:'E', 4:'U', 5:'T', 6:'D', 7:'C', 8:'W', 9:'S'
 keynames=list(advent_keymapping.values())
 advent_room_descriptions.update({5000+i+j+64:f'Room {keyname} {"(pushed)" if count_bits(i+j+64)&1 else "(released)"}' for i,keyname in enumerate(keynames) for j in (0,128)})
 advent_map.update({i+j+64:5000+i+j+64 for i in range(len(keynames)) for j in (0,128)})
-advent_edges+=[(room1,action,room2) for i in range(len(keynames)) for j in (0,128) for k,action in enumerate(keynames) for room1,room2 in ((5000+i+j+64,5000+k+64),) if not action in ()]
+advent_edges+=[(room1,action,room2) for i in range(len(keynames)) for j in (0,128) for k,action in enumerate(keynames) for room1,room2 in ((5000+i+j+64,5000+k+64),) if not action in ('A','C','^T')]
 advent_edges.append((4000,'D',5069))
 advent_map2={i^128:room for i,room in advent_map.items()}
 advent_map2.update(advent_map)
@@ -315,8 +320,11 @@ class Eprom1(Eprom):
 
       elif action and room_actions:
         newroom=room_actions.get(action)
-        if (newroom==None) and not action in ('A','C'):#don't do default action for Alt or Ctrl'
-          newroom=room_actions.get('_')#default action
+        if (newroom==None):
+          if not action in ('A','C','^T'):#don't do default action for Alt or Ctrl'
+             newroom=room_actions.get('_')#default action
+          elif action=='^T':
+            newroom=room
         newdata=advent_imap.get(newroom)
         if newdata!=None:
           data=newdata
