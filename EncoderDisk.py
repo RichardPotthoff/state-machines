@@ -27,13 +27,15 @@ def circle(r,eps=0.05):
   return(x,y,)
   
 def plotEncoderDisk(r=60,dr=3,n=100,labels=True,tickmarks=True,saveas=None,bits=1,xmin=-100,xmax=100):
-  def plot_ring(ax,r,dr,n,bit=0):
+  def plot_ring(ax,r,dr,n,bit=0, lw=0.35,ls=0.35, lw_plot=1):
+    # lw=line width, ls= line spacing
     da=2*pi/n
-    m=int((da*(r+dr)/0.6)+0.5)
-    dda=da/(m*2)
-    xy=[[rij*cos(a),rij*sin(a)] for i,g in enumerate(cyclicGrayGen(n)) for j in range(m*4) for rij,a in ((r+dr if ((g^(g>>1))>>bit)&1 and ((j+1)//2)%2 else r,-da*i-dda*(j//2+0.5)),)]
-    ax.plot([x for x,y in xy],[y for x,y in xy], 'k',lw=1)
-    ax.plot(*circle(r), 'k',lw=1)
+    lwa=lw/(r+0.5*dr)
+    m=int((da-lwa)*(r+0.5*dr)/ls+3)//2*2#m is even
+    dda=(da-lwa)/(m-1)
+    xy=[[rij*cos(a),rij*sin(a)] for i,g in enumerate(cyclicGrayGen(n)) for j in range(m*2) for rij,a in ((r+dr if ((g^(g>>1))>>bit)&1 and ((j+1)//2)%2 else r,-(da*i+0.5*lwa+dda*(j//2))),)]
+    ax.plot([x for x,y in xy],[y for x,y in xy], 'k',lw=lw_plot)
+    ax.plot(*circle(r), 'k',lw=lw_plot)
   plt.close()
   max_bits=(n*4-1).bit_length()
   A4=(lambda A:(2**((-A*0.5)-0.25),2**((-A*0.5)+0.25)))(4)#
@@ -73,6 +75,6 @@ def plotEncoderDisk(r=60,dr=3,n=100,labels=True,tickmarks=True,saveas=None,bits=
   plt.close()
   
 #plotEncoderDisk(r=60.5, n=256, bits=7, labels=False,tickmarks=True,saveas='EncDisk256')
-plotEncoderDisk(r=60.5, n=256, bits=7, labels=True,tickmarks=True,saveas='EncDisk256_lbl_a')
-#plotEncoderDisk(r=60.5, n=254, bits=8, labels=True,tickmarks=True)
+#plotEncoderDisk(r=60.5, n=256, bits=7, labels=True,tickmarks=True,saveas='EncDisk256_lbl_a')
+plotEncoderDisk(r=60.5, n=254, bits=8, labels=True,tickmarks=True)
 
