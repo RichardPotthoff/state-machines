@@ -1,6 +1,11 @@
+#!/usr/bin/env python3
 from matplotlib import pyplot as plt
 from math import sin,cos,pi
-import os
+import os,sys,getopt
+
+def int2gray(i):
+  return i^(i>>1)
+  
 def cyclicGrayGen(n):
   """
   print('\nn=2**k:','\n'.join([f'{i^(i>>1):08b}' for i in cyclicGrayGen(16)]),sep='\n')
@@ -26,24 +31,25 @@ def circle(r,eps=0.05):
   y=[r*sin(da*i) for i in range(n+1)]
   return(x,y,)
   
-def plotEncoderDisk(r=60,dr=3,n=100,labels=True,tickmarks=True,saveas=None,bits=1,xmin=-100,xmax=100):
-  def plot_ring(ax,r,dr,n,bit=0, lw=0.35,ls=0.35, lw_plot=1):
+def plotEncoderDisk(codes,r=60,dr=3,labels=None,tickmarks=True,saveas=None,bits=1,xmin=-100,xmax=100):
+  def plot_ring(ax,r,dr,numbers,bit=0, lw=0.35,ls=0.35, lw_plot=1):
     # lw=line width, ls= line spacing
+    n=len(numbers)
     da=2*pi/n
     lwa=lw/(r+0.5*dr)
     m=int((da-lwa)*(r+0.5*dr)/ls+3)//2*2#m is even
     dda=(da-lwa)/(m-1)
-    xy=[[rij*cos(a),rij*sin(a)] for i,g in enumerate(cyclicGrayGen(n)) for j in range(m*2) for rij,a in ((r+dr if ((g^(g>>1))>>bit)&1 and ((j+1)//2)%2 else r,-(da*i+0.5*lwa+dda*(j//2))),)]
+    xy=[[rij*cos(a),rij*sin(a)] for i,g in enumerate(numbers) for j in range(m*2) for rij,a in ((r+dr if ((g>>bit)&1) and ((j+1)//2)%2 else r,-(da*i+0.5*lwa+dda*(j//2))),)]
     ax.plot([x for x,y in xy],[y for x,y in xy], 'k',lw=lw_plot)
     ax.plot(*circle(r), 'k',lw=lw_plot)
   plt.close()
-  max_bits=(n*4-1).bit_length()
   A4=(lambda A:(2**((-A*0.5)-0.25),2**((-A*0.5)+0.25)))(4)#
   f=plt.figure(figsize=(A4[0]/0.0254,A4[1]/0.0254))
   width=(xmax-xmin)*0.001#in mm
   ax=f.add_axes((0.025,0.025,width/A4[0],width/A4[0]),aspect='equal')
+  n=len(codes)
   for bit in range(bits):
-    plot_ring(ax,r+dr*bit,dr,n,bit)
+    plot_ring(ax,r+dr*bit,dr,codes,bit)
   ro=r+dr*bits
   ax.plot(*circle(ro), 'k',lw=1)
   if labels or tickmarks:
@@ -56,7 +62,7 @@ def plotEncoderDisk(r=60,dr=3,n=100,labels=True,tickmarks=True,saveas=None,bits=
         ax.plot(*[[r1*cs for r1 in(ro+dr/2,ro+dr,)] for cs in(ca,sa,)],'k',lw=1)
         ax.plot(*[[r1*cs for r1 in(r-dr/2,r-dr,)] for cs in(ca,sa,)],'k',lw=1)
       if labels:
-        ax.text((ro+1.2*dr)*ca,(ro+1.2*dr)*sa,f'{i}',rotation=a/pi*180,rotation_mode='anchor',va='center',ha='left', fontsize=6)
+        ax.text((ro+1.2*dr)*ca,(ro+1.2*dr)*sa,f'{i if labels==True else labels[i]}',rotation=a/pi*180,rotation_mode='anchor',va='center',ha='left', fontsize=6)
 
   ax.plot(*circle(15/2), 'k',lw=1)
   ax.plot(*circle(35.5/2), 'k',lw=1)
@@ -73,8 +79,50 @@ def plotEncoderDisk(r=60,dr=3,n=100,labels=True,tickmarks=True,saveas=None,bits=
       ext='.pdf'
     plt.savefig(filename+ext, papertype = 'a4', orientation = 'portrait', format = ext.lstrip('.'))
   plt.close()
+
+def main(argv):
+  n=256
+  codes=[int2gray(i) for i in cyclicGrayGen(n)] 
+  r=60.5
+  bits=None
+  labels=False
+  tickmarks=False
+  saveas=None
+  try:
+     opts, args = getopt.getopt(argv[1:],"hg:n:tl:b:c:o:",longopts=["ofile=", "saveas=", "count=", "graycount=", "labels=", "bits=", "tickmarks"])
+  except getopt.GetoptError:
+     print( f'{os.path.basename(argv[0])} [-h -g -c -t -l -o -b <outputfile>]')
+     sys.exit(2)
+  for opt,arg in opts:
+    if opt in ("-o","--ofile=","--saveas"):
+      saveas=arg
+    elif opt in ("-r"):
+      r=float(arg)
+    elif opt in ("-n","-c","--count"):
+      n=int(arg)
+      codes=range(n)
+      print('count:',n)
+    elif opt in ("-l","--labels"):
+      if arg in ('+','on'):
+        labels=True
+      elif arg in ('-','off'):
+        labels=False
+      else:
+        labels=[('{i:'+arg+'}').format(i=i) for i in range(n)]
+    elif opt in ("-g","--graycount"):
+      if arg:
+        n=int(arg)
+      codes=[int2gray(i) for i in cyclicGrayGen(n)]
+    elif opt in ("-t","--tickmarks"):
+      tickmarks=True
+      if arg in ("off",):
+        tickmarks=False
+    elif opt in ("-b","--bits"):
+        bits=int(arg)
+  if not bits:
+    bits=n.bit_length()
+  plotEncoderDisk(codes=codes,r=r, bits=bits, labels=labels,tickmarks=tickmarks,saveas=saveas)
   
-#plotEncoderDisk(r=60.5, n=256, bits=7, labels=False,tickmarks=True,saveas='EncDisk256')
-#plotEncoderDisk(r=60.5, n=256, bits=7, labels=True,tickmarks=True,saveas='EncDisk256_lbl_a')
-plotEncoderDisk(r=60.5, n=254, bits=8, labels=True,tickmarks=True)
+if __name__ == '__main__':
+  main(sys.argv)
 
