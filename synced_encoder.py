@@ -28,6 +28,15 @@ def grayToInt(gray):
 def intToGray(i):
   return i^(i>>1)
   
+def count_bits(n):
+  n = (n & 0x5555555555555555) + ((n & 0xAAAAAAAAAAAAAAAA) >> 1)
+  n = (n & 0x3333333333333333) + ((n & 0xCCCCCCCCCCCCCCCC) >> 2)
+  n = (n & 0x0F0F0F0F0F0F0F0F) + ((n & 0xF0F0F0F0F0F0F0F0) >> 4)
+  n = (n & 0x00FF00FF00FF00FF) + ((n & 0xFF00FF00FF00FF00) >> 8)
+  n = (n & 0x0000FFFF0000FFFF) + ((n & 0xFFFF0000FFFF0000) >> 16)
+  n = (n & 0x00000000FFFFFFFF) + ((n & 0xFFFFFFFF00000000) >> 32) # This last & isn't strictly necessary.
+  return n
+  
 def quadamp(dang,n,index='3'):
   n1=(0.5*dang/pi*n)%n
   if index=='3':
@@ -188,7 +197,7 @@ class dial_lock (Scene):
     self.initial_state=initial_state
   def setup(self):
     self.background_color=(1,1,1)
-    n=64+8
+    n=len(self.data)//8+8
     r=0.49*min(self.size.w, self.size.h)
     rled=r*0.025
     Rled=+0.95*r
@@ -229,24 +238,68 @@ class dial_lock (Scene):
     pass
 addressInversionMask=(1<<9)-1 
 dataInversionMask=(1<<8)-1
-def dcounter():
-  def ff(i,j):
+def dcounter(nbits=7):
+  #synced counter with quadrature input, resets on reverse, and waits for sync before counting up from 0 
+  def ff(i,j): #fast forward from i to j, changing one bit at a time from lsb to msb
     ig=intToGray(i)
     jg=intToGray(j)
     dj=ig^jg
     mask=1
     for _ in range(dj.bit_length()):
       if dj&mask:
-        return grayToInt(ig^mask)
+        return grayToInt(ig^mask) #change only the lsb and return the result
       mask<<=1
+    return i # in case dj.bit_length==0 (i==j) no bit needs to be changed
+  n=1<<nbits
+  actions=[([i+1,i,i,n-1-i][(i+j) % 4])%n if (i+1)%n<=n//2 else ff(i,n-3)  for j in range(4) for i in range(n)]
+  actions[n-2::n]=[n-2+i for i in [-1,0,0,1]]
+  actions[n-3::n]=[n-3+i for i in [0,1,0,0]]
+  actions[n-1]=n-1-1  
+  actionsg=[None]*n*4
+  for i in range(n):
+    for j in range(4):
+      ig=intToGray(i)
+      jg=intToGray(j)
+      actionsg[ig+jg*n]=intToGray(actions[i+j*n])
 
-  actions=[([i+1,i,i,127-i][(i+j) % 4])%128 if (i+1)%128<=64 else ff(i,125)  for j in range(4) for i in range(128)]
-  actions[126::128]=125,126,126,127
-  actions[125::128]=125,126,125,125
-  return dial_lock(actions,initial_state=0)
+  return actions,actionsg
   
-p=dcounter()
-run(p, scene.LANDSCAPE,show_fps=True)
+def udcounter(nbits=8):
+# up - down counter (continuous quadrature input, not synced)
+  n=1<<nbits
+  actions=[([i+1,i,i,i-1][(i+j) % 4])%n  for j in range(4) for i in range(n)]
+  actionsg=[intToGray(([i+1,i,i,i-1][(i+j) % 4])%n)  for jg in range(4) for ig in range(n) for i,j in ((grayToInt(ig),grayToInt(jg)),) ]
+  return actions,actionsg
+  
+def make_eprom(outfilename=None):  
+  #Eprom i/o:
+  #D0-D7: Gray-encoded State of the state machine (inverted, 0=5V,1=0V)
+  #A0-A7: state feedback from D0-D7
+  #A8,A9: 2 quadrature encoded inputs 90° phase-shifted (270° for sync/reverse count)
+  #A10: select 0V for up-down counter, 5V for synced encoder/counter
+  #A11-A14: 5V (only 2kB of the Eprom are utilized, 1kB for )
+  actions1,actionsg1=dcounter(nbits=8)# synced counter (counts from 0-128, waits for sync, and repeats)
+  actions2,actionsg2=udcounter(nbits=8)# up-down counter counts from 0,1, ..,254,255,0,1... or reverse)
+  actions=actions1+actions2
+  actionsg=actionsg1+actionsg2
+  n=len(actionsg)//4
+  eprom=[0xff]*(1<<15)
+  for i in range(len(actionsg)):
+    eprom[i^((1<<15)-1)]=actionsg[i]^0xff
+  actions_test=[grayToInt(eprom[(ig+jg*n//2+k*n//2*4)^((1<<15)-1)]^0xff) for k in range(2) for j in range(4) for i in range(n//2) for ig,jg in ((intToGray(i),intToGray(j)),)]
+  assert actions==actions_test
+  if outfilename:
+    with open(outfilename,'wb') as f: f.write(bytes(eprom))
+  else:
+    return eprom
+
+
+def main():
+  p=dial_lock(dcounter(nbits=7)[0],initial_state=0)
+  run(p, scene.LANDSCAPE,show_fps=True)
+
+
+
 def test():
   from matplotlib import pyplot as plt
   import numpy as np
@@ -267,3 +320,6 @@ def test():
   phase=np.array([quadphase(x,phi1,phi2,n//4,index) for x in ang])
   plt.plot(ang,phase)
   plt.show()
+  
+if __name__=='__main__':
+  main()
