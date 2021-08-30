@@ -1,7 +1,7 @@
 # State Machine Synchronized Counter with a Quadrature Encoded Input
 # 
-# The state machine counts up to a maximum, and then waits for the synchronization signa.
-# The synchronization signal is a 180° phase-shift of the quadrature encoded input.
+# The state machine counts up to a maximum, and then waits for the synchronization signal.
+# The synchronization signal is a 180° phase-shift of the quadrature encoded input (from -90° to +90°).
 #
 # The reversal of the quadrature encoded input is achived by having the detectors normally
 # phase shifted 270° from each other, and change temporarily to a 90° phase shift for the synchronization.
@@ -9,6 +9,10 @@
 # The shift change from 270° to 90° is achived by eliminating one notch on the encoder disk at the
 # sync position. Tis causes two count pulses in the reverse direction.
 #
+# The procedure make_eprom(filename) saves a 32kB binary file to disk that can be burned to
+# an EPROM. Only the last 2kB (0x7800-0x7fff) are actually used, the rest is filled with 0xFF.
+# A STMicroelectronics M27C256B EPROM (manufactured in '96) from Ali-Express worked for me.
+# 
 import scene
 from scene import *
 import sound
@@ -28,7 +32,7 @@ def grayToInt(gray):
 def intToGray(i):
   return i^(i>>1)
   
-def count_bits(n):
+def bit_count(n):
   n = (n & 0x5555555555555555) + ((n & 0xAAAAAAAAAAAAAAAA) >> 1)
   n = (n & 0x3333333333333333) + ((n & 0xCCCCCCCCCCCCCCCC) >> 2)
   n = (n & 0x0F0F0F0F0F0F0F0F) + ((n & 0xF0F0F0F0F0F0F0F0) >> 4)
@@ -36,6 +40,9 @@ def count_bits(n):
   n = (n & 0x0000FFFF0000FFFF) + ((n & 0xFFFF0000FFFF0000) >> 16)
   n = (n & 0x00000000FFFFFFFF) + ((n & 0xFFFFFFFF00000000) >> 32) # This last & isn't strictly necessary.
   return n
+
+def parity(n):
+  return bit_count(n)&1
   
 def quadamp(dang,n,index='3'):
   n1=(0.5*dang/pi*n)%n
@@ -271,6 +278,14 @@ def udcounter(nbits=8):
   actionsg=[intToGray(([i+1,i,i,i-1][(i+j) % 4])%n)  for jg in range(4) for ig in range(n) for i,j in ((grayToInt(ig),grayToInt(jg)),) ]
   return actions,actionsg
   
+def lcounter(nbits=8):
+# up - down counter (continuous quadrature input, not synced)
+  n=1<<nbits
+  p=1
+  actions=[([i+(-3 if i==(n-1) else 1),i,i,i+(3 if i==0 else -1)][(i+j+p) % 4])%n  for j in range(4) for i in range(n)]
+  actionsg=[intToGray(actions[i+j*n])  for jg in range(4) for ig in range(n) for i,j in ((grayToInt(ig),grayToInt(jg)),) ]
+  return actions,actionsg
+ 
 def make_eprom(outfilename=None):  
   #Eprom i/o:
   #D0-D7: Gray-encoded State of the state machine (inverted, 0=5V,1=0V)
@@ -278,16 +293,20 @@ def make_eprom(outfilename=None):
   #A8,A9: 2 quadrature encoded inputs 90° phase-shifted (270° for sync/reverse count)
   #A10: select 0V for up-down counter, 5V for synced encoder/counter
   #A11-A14: 5V (only 2kB of the Eprom are utilized, 1kB for )
-  actions1,actionsg1=dcounter(nbits=8)# synced counter (counts from 0-128, waits for sync, and repeats)
-  actions2,actionsg2=udcounter(nbits=8)# up-down counter counts from 0,1, ..,254,255,0,1... or reverse)
-  actions=actions1+actions2
-  actionsg=actionsg1+actionsg2
-  n=len(actionsg)//4
+  nbits=8
+  actions1,actionsg1=dcounter(nbits=nbits)# synced counter (counts from 0-128, waits for sync, and repeats)
+  actions2,actionsg2=udcounter(nbits=nbits)# up-down counter counts from 0,1, ..,254,255,0,1... or reverse)
+  actions3,actionsg3=lcounter(nbits=nbits)# up-down counter counts from 0,1, ..,254,255 or reverse)
+  actions=actions1+actions2+actions3
+  actionsg=actionsg1+actionsg2+actionsg3
+  n=1<<nbits
+  m=3
   eprom=[0xff]*(1<<15)
   for i in range(len(actionsg)):
     eprom[i^((1<<15)-1)]=actionsg[i]^0xff
-  actions_test=[grayToInt(eprom[(ig+jg*n//2+k*n//2*4)^((1<<15)-1)]^0xff) for k in range(2) for j in range(4) for i in range(n//2) for ig,jg in ((intToGray(i),intToGray(j)),)]
+  actions_test=[grayToInt(eprom[(ig+jg*n+k*n*4)^((1<<15)-1)]^0xff) for k in range(m) for j in range(4) for i in range(n) for ig,jg in ((intToGray(i),intToGray(j)),)]
   assert actions==actions_test
+  assert max([bit_count((i&0xff)^x) for i,x in enumerate(eprom[(1<<15)-1024*m:])])<=1
   if outfilename:
     with open(outfilename,'wb') as f: f.write(bytes(eprom))
   else:
@@ -296,6 +315,7 @@ def make_eprom(outfilename=None):
 
 def main():
   p=dial_lock(dcounter(nbits=7)[0],initial_state=0)
+#  p=dial_lock(lcounter(nbits=7)[0],initial_state=0)
   run(p, scene.LANDSCAPE,show_fps=True)
 
 

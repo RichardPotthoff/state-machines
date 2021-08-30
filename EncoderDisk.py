@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from matplotlib import pyplot as plt
 from math import sin,cos,pi
-import os,sys,getopt
+import os,sys,getopt,argparse
 
 def int2gray(i):
   return i^(i>>1)

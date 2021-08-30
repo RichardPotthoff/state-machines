@@ -17,13 +17,41 @@ def count_bits(n):
   return n
 
 advent_room_descriptions={61: "YOU'RE AT WEST END OF LONG HALL.", 107: 'YOU ARE IN A MAZE OF TWISTY LITTLE PASSAGES, ALL DIFFERENT.', 112: 'YOU ARE IN A LITTLE MAZE OF TWISTING PASSAGES, ALL DIFFERENT.', 131: 'YOU ARE IN A MAZE OF TWISTING LITTLE PASSAGES, ALL DIFFERENT.', 132: 'YOU ARE IN A LITTLE MAZE OF TWISTY PASSAGES, ALL DIFFERENT.', 133: 'YOU ARE IN A TWISTING MAZE OF LITTLE PASSAGES, ALL DIFFERENT.', 134: 'YOU ARE IN A TWISTING LITTLE MAZE OF PASSAGES, ALL DIFFERENT.', 135: 'YOU ARE IN A TWISTY LITTLE MAZE OF PASSAGES, ALL DIFFERENT.', 136: 'YOU ARE IN A TWISTY MAZE OF LITTLE PASSAGES, ALL DIFFERENT.', 137: 'YOU ARE IN A LITTLE TWISTY MAZE OF PASSAGES, ALL DIFFERENT.', 138: 'YOU ARE IN A MAZE OF LITTLE TWISTING PASSAGES, ALL DIFFERENT.', 139: 'YOU ARE IN A MAZE OF LITTLE TWISTY PASSAGES, ALL DIFFERENT.', 140: 'DEAD END',}
-advent_room_descriptions.update({room+2000:'/'+text for room,text in advent_room_descriptions.items()})
+advent_room_descriptions={
+  #    123456789012345678901
+  61: "WEST END OF LONG HALL",
+ 107: 'MAZE TWISTY LTL PSGS',
+ 112: 'LTL MAZE TWSTNG PSGS', 
+ 131: 'MAZE TWSTNG LTL PSGS', 
+ 132: 'LTL MAZE TWISTY PSGS', 
+ 133: 'TWSTNG MAZE LTL PSGS', 
+ 134: 'TWSTNG LTL MAZE PSGS', 
+ 135: 'TWISTY LTL MAZE PSGS', 
+ 136: 'TWISTY MAZE LTL PSGS', 
+ 137: 'LTL TWISTY MAZE PSGS', 
+ 138: 'MAZE LTL TWSTNG PSGS', 
+ 139: 'MAZE LTL TWISTY PSGS', 
+ 140: 'VEND MACH.:PUT COINS',}
+
+#advent_room_descriptions.update({room+2000:'/'+text for room,text in advent_room_descriptions.items()})
+advent_room_descriptions.update({room+2000:''+text for room,text in advent_room_descriptions.items()})
+
 advent_room_descriptions.update({1000:'Select Game: "E"=maze, "N"=Casino',
 3061:"YOU'RE BACK AT WEST END OF LONG HALL.",
 1061:"YOU DROPPED THE BATTERIES. WEST END OF LONG HALL.",
 140:"DEAD END. THERE IS A VENDING MACHINE. PUT COINS IN TO GET BATTERIES.",
 2140:"DEAD END. YOU NOW HAVE FRESH BATTERIES.",
 0:"None"
+})
+
+advent_room_descriptions.update({
+  #    123456789012345678901
+ 1000:'Game:E=Maze, N=Casino',
+ 3061:"WEST END OF LONG HALL",
+ 1061:"WEST END OF LONG HALL",
+  140:"VEND MACH.: PUT COINS",
+ 2140:"VEND MACH., BATTERIES",
+    0:"None"
 })
 
 advent_map={ 29: 134 ,156:136,  20:138,  149:1000,
@@ -37,7 +65,7 @@ advent_map={0b00_011_101: 134, 0b10_011_100: 136, 0b00_010_100: 138, 0b10_010_10
             0b10_011_111:1988, 0b00_011_110: 131, 0b10_010_110: 107, 0b00_010_111:  61,
             }
 
-advent_map.update({147^128:1999,159^128:1989,27^128:1132,18^128:1135})
+advent_map.update({147^128:1999,159^128:1989})#,27^128:1132,18^128:1135})
 advent_map.update({id^(128|64):room+2000 for id,room in advent_map.items()})#the "blinking" rooms
 advent_edges=[(61, 'S', 107), (107, 'D', 61), (107, 'S', 131), (107, 'U', 135), (107, 'W', 138), (112, 'SE', 135), (112, 'W', 137), (112, 'D', 138), (112, 'S', 140), (131, 'W', 107), (131, 'NW', 133), (131, 'U', 136), (132, 'N', 133), (132, 'D', 139), (133, 'D', 131), (133, 'W', 132), (133, 'SW', 135), (133, 'N', 137), (134, 'D', 136), (134, 'W', 139), (135, 'N', 107), (135, 'U', 112), (135, 'S', 133), (136, 'W', 131), (136, 'D', 134), (136, 'NW', 137), (136, 'SE', 138), (137, 'W', 112), (137, 'D', 133), (137, 'N', 136), (137, 'E', 139), (138, 'D', 107), (138, 'NW', 112), (138, 'S', 136), (139, 'E', 132), (139, 'N', 134), (139, 'U', 137), (140, 'N', 112)]
 
@@ -105,6 +133,36 @@ advent_room_descriptions.update({
 4034:'ENTER THE NEXT LETTER OF THE CODE.',
 4033:'YOU HAVE ENTERED THE CORRECT CODE. THE VAULT IS NOW OPEN.'
 })
+advent_room_descriptions.update({
+ #    123456789012345678901
+4000:"CASINO: ROLL DICE (P)",
+4001:'"1", TRY AGAIN.',
+4002:'"2", TRY AGAIN.',
+4003:'"3",VAULTCODE="SETUP"',
+4004:'"4", TRY AGAIN.',
+4005:'"5", TRY AGAIN.',
+4006:'"6", YOU WIN! T=EXIT',
+4007:'VAULT, ENTER CODE:',
+4010:'YOU HAVE TAKEN IT.',
+4011:'THE DICE ARE ROLLING.',
+4012:'THE DICE ARE ROLLING.',
+4013:'THE DICE ARE ROLLING.',
+4014:'THE DICE ARE ROLLING.',
+4015:'THE DICE ARE ROLLING.',
+4016:'THE DICE ARE ROLLING.',
+4017:'VAULT, ENTER CODE:',
+4027:'ENTER THE 2ND LETTER:',
+4026:'ENTER THE 3RD LETTER:',
+4025:'ENTER THE 4TH LETTER:',
+4024:'ENTER THE NEXT LETTER',
+4023:'THE VAULT IS NOW OPEN',
+4022:'INSIDE THE VAULT. ',
+4037:'ENTER THE 2ND LETTER:',
+4036:'ENTER THE 3RD LETTER:',
+4035:'ENTER THE 4TH LETTER:',
+4034:'ENTER THE NEXT LETTER',
+4033:'THE VAULT IS NOW OPEN'
+})
 
 advent_map.update({
                 5:4000, 132:4006,  12:4005, 141:4004,
@@ -163,7 +221,8 @@ advent_edges+=[(room1,action,room2) for i in range(len(keynames)) for j in (0,12
 advent_edges.append((4000,'D',5069))
 advent_map2={i^128:room for i,room in advent_map.items()}
 advent_map2.update(advent_map)
-advent_imap={j:i for i,j in advent_map.items()} 
+#advent_imap={j:i for i,j in advent_map.items()} 
+advent_imap={j:i for i,j in advent_map2.items()} 
 advent_rooms={room:{action:room2 for room1,action,room2 in advent_edges if room1==room} for room in advent_imap}
                    
                    
@@ -765,6 +824,15 @@ class Demo:
     else:
       self.Eprom.clearPin(sender.targetPin)
       
+def  make_descriptions():
+  result=[f'{index:d}' for index in range(256)]
+  for index in range(256):
+    ad_index=advent_map2.get(index) or advent_map2.get(index^128)
+    ad_description=advent_room_descriptions.get(ad_index)
+    if ad_index and ad_description:
+      result[index]=ad_description
+  return result
+
 if __name__=='__main__':
   D=Demo()  
   D.main()
