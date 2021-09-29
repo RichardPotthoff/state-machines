@@ -288,11 +288,11 @@ def lcounter(nbits=8):
  
 def make_eprom(outfilename=None):  
   #Eprom i/o:
-  #D0-D7: Gray-encoded State of the state machine (inverted, 0=5V,1=0V)
+  #D0-D7: Gray-encoded State of the state machine (inverted, 0=5V,1=0V) 
   #A0-A7: state feedback from D0-D7
   #A8,A9: 2 quadrature encoded inputs 90° phase-shifted (270° for sync/reverse count)
-  #A10: select 0V for up-down counter, 5V for synced encoder/counter
-  #A11-A14: 5V (only 2kB of the Eprom are utilized, 1kB for )
+  #A10-A11: (5V,5V) for synced encoder/counter, (0V,5V) up-down cyclic, (5V,0V)up-down limited
+  #A12-A14: 5V (only 3kB of the Eprom are utilized )
   nbits=8
   actions1,actionsg1=dcounter(nbits=nbits)# synced counter (counts from 0-128, waits for sync, and repeats)
   actions2,actionsg2=udcounter(nbits=nbits)# up-down counter counts from 0,1, ..,254,255,0,1... or reverse)
@@ -312,6 +312,39 @@ def make_eprom(outfilename=None):
   else:
     return eprom
 
+def make_eprom_i(outfilename=None):  
+  #Eprom i/o:
+  #D0-D7: Gray-encoded State of the state machine (inverted, 0=5V,1=0V)
+  #       polarity of D7/A7 and D6/A6 can be inverted by setting A10, and/or A11 to 0V (see below)
+  #A0-A7: state feedback from D0-D7
+  #A8,A9: 2 quadrature encoded inputs 90° phase-shifted (270° for sync/reverse count)
+  #       polarity can be inverted by setting A12 to 0V
+  #A10: invert blanking signal (A7,D7) for downstream "output enable" inputs
+  #A11: reverse gray code count direction by inverting MSB (A6,D6) 
+  #    useful when scanning direction is left to right instead of right to left
+  #A12: invert inputs from quatrature encoder, (A8,A9) 
+  #     this may be necessary if light sensors have inverted outputs, or if the index mark is 
+  #     white instead of black
+  #A13-A14: 5V (only 8kB of the Eprom are utilized)
+  actions,actionsg=dcounter(8)# synced counter (counts from 0-128, waits for sync, and repeats)
+  eprom=[0xff]*(1<<15)
+  for k in range(1024*8):
+    j,i=divmod(k,1024)
+    md=ma=0
+    if j & 1:#A10
+      ma^=1<<7#inverted bit 7 (blanking signal)
+      md^=1<<7
+    if j & 2:#A11
+      ma^=1<<6#invert bit 6 (gray code counts backwards from 127 to 0)
+      md^=1<<6
+    if j & 4:#A12
+      ma^=3<<8 #inverted quadrature encoder inputs 
+    eprom[k^((1<<15)-1)^ma]=actionsg[i]^0xff^md
+  assert max([bit_count((i&0xff)^x) for i,x in enumerate(eprom[(1<<15)-1024*8:])])<=1
+  if outfilename:
+    with open(outfilename,'wb') as f: f.write(bytes(eprom))
+  else:
+    return eprom
 
 def main():
   p=dial_lock(dcounter(nbits=7)[0],initial_state=0)
