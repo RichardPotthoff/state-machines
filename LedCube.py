@@ -32,7 +32,7 @@ advent_room_descriptions={
  138: 'MAZE LTL TWSTNG PSGS', 
  139: 'MAZE LTL TWISTY PSGS', 
  140: 'VEND MACH.:PUT COINS',}
-
+maze_room_numbers=list(advent_room_descriptions.keys())[1:-1]
 #advent_room_descriptions.update({room+2000:'/'+text for room,text in advent_room_descriptions.items()})
 advent_room_descriptions.update({room+2000:''+text for room,text in advent_room_descriptions.items()})
 
@@ -68,6 +68,7 @@ advent_map={0b00_011_101: 134, 0b10_011_100: 136, 0b00_010_100: 138, 0b10_010_10
 advent_map.update({147^128:1999,159^128:1989})#,27^128:1132,18^128:1135})
 advent_map.update({id^(128|64):room+2000 for id,room in advent_map.items()})#the "blinking" rooms
 advent_edges=[(61, 'S', 107), (107, 'D', 61), (107, 'S', 131), (107, 'U', 135), (107, 'W', 138), (112, 'SE', 135), (112, 'W', 137), (112, 'D', 138), (112, 'S', 140), (131, 'W', 107), (131, 'NW', 133), (131, 'U', 136), (132, 'N', 133), (132, 'D', 139), (133, 'D', 131), (133, 'W', 132), (133, 'SW', 135), (133, 'N', 137), (134, 'D', 136), (134, 'W', 139), (135, 'N', 107), (135, 'U', 112), (135, 'S', 133), (136, 'W', 131), (136, 'D', 134), (136, 'NW', 137), (136, 'SE', 138), (137, 'W', 112), (137, 'D', 133), (137, 'N', 136), (137, 'E', 139), (138, 'D', 107), (138, 'NW', 112), (138, 'S', 136), (139, 'E', 132), (139, 'N', 134), (139, 'U', 137), (140, 'N', 112)]
+advent_edges+=[(r,'_',r) for r in maze_room_numbers]
 
 advent_edges=(advent_edges +
              [(room1+2000,action,room2+2000) for room1,action,room2 in advent_edges if not ((room1==107) and (room2==61))])#"blinking" edges
@@ -777,7 +778,7 @@ class Demo:
     self.sv.scene.Eprom.updatePins(self.Eprom.activePins)
     ad_index=advent_map2.get(self.index)
     ad_description=advent_room_descriptions.get(advent_map2.get(self.index))
-    self.sv.scene.messagetext=f'{self.Eprom.key() if self.Eprom.key()!=None else -6:2d}\n'+ f'{advent_keymapping.get(self.Eprom.key())  or "":2s}\n{self.index:3d}\n{self.index:08b}\n'+(f'{ad_index:3d} {ad_description.lower()}'if ad_index and ad_description else '')
+    self.sv.scene.messagetext=f'{self.Eprom.key() if self.Eprom.key()!=None else -6:2d}\n'+ f'{count_bits(self.index)&1}{advent_keymapping.get(self.Eprom.key())  or "":2s}\n{self.index:3d}\n{self.index:08b}\n'+(f'{ad_index:3d} {ad_description.lower()}'if ad_index and ad_description else '')
     try:
       t,i,item=self.q.get_nowait()
       if t>atTime:
