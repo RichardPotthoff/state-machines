@@ -86,8 +86,8 @@ advent_edges.append(( 132,'S',1988))
 advent_edges.append(( 131,'SW',1988))
 advent_edges.append(( 134,'N',1988))
 advent_edges.append(( 134,'NW',1988))
-advent_edges.append(( 1989,'_', 132))
-advent_edges.append(( 1988,'__',132))
+advent_edges.append(( 1989,'_', 134))
+advent_edges.append(( 1988,'__',134))
 #advent_edges.append(( 1989,'U',131))
 advent_edges.append(( 1989,'S',134))
 advent_edges.append(( 1989,'NW',132))
@@ -631,7 +631,7 @@ class Demo:
     v1width=650
     self.view1=ui.View(frame=(256+768-v1width,0,v1width,v1width))
     self.messagetext=''
-    self.rbtn1=ui.SegmentedControl(frame=(5.0,340.0,204.0,34.0), segments=('auto','xyz','123','maze'), action= self.rbutton_tapped)
+    self.rbtn1=ui.SegmentedControl(frame=(5.0,340.0,304.0,34.0), segments=('auto','xyz','123','maze','hamming'), action= self.rbutton_tapped)
     self.switch1=ui.Switch(frame=(6.0,34.0,51.0,31.0),action=self.setPin)
     self.switch1.targetPin=2
     self.switch2=ui.Switch(frame=(197,167,51.0,31.0),action=self.setPin)
@@ -733,7 +733,17 @@ class Demo:
     
   def keypad_output_changed(self,i,value):
     self.q.put((0,next(id),(lambda pin,value:lambda:self.Eprom.setPin(pin,value))(27-i,value)))
-    
+  def reset_leds(self):
+      for led_plane in self.led_nodes:
+        for led_row in led_plane:
+          for led in led_row:
+            led.setGeometry(self.off_led)
+      for wire_plane in self.wire_nodes:
+        for wire_row in wire_plane:
+          for wire in wire_row:
+            wire.setGeometry(self.off_wire)
+      return
+      
   def update(self, view, atTime):
     n_blink=3
     tick = int(atTime*7) % (256*2*n_blink)
@@ -763,6 +773,11 @@ class Demo:
       return #update_Led()
       
     update_Led(self.oldindex,on=False) 
+    if self.mode==4:
+      for i in [0, 7, 25, 30, 42, 45, 51, 52, 75, 76, 82, 85, 97, 102, 120, 127]:
+        update_Led(i^(64|128) if i & 64 else i,on=True)
+      return
+
     self.Eprom.activePins-=self.Eprom.pins_from_address(255)
     self.Eprom.activePins|=self.Eprom.pins_from_address(self.index)
     if self.mode==0:
@@ -796,6 +811,7 @@ class Demo:
     
   def rbutton_tapped(self,sender):
     self.mode=sender.selected_index
+    self.reset_leds()
     if self.mode==0:
       self.keypad3.remove_from_parent()
       self.keypad2.remove_from_parent()
@@ -818,6 +834,11 @@ class Demo:
       self.keypad1.remove_from_parent()
       self.keypad2.remove_from_parent()
       self.sv.scene.add_child(self.keypad3)
+    elif self.mode==4:
+      self.keypad1.remove_from_parent()
+      self.keypad2.remove_from_parent()
+      self.keypad3.remove_from_parent()
+    
     
   def setPin(self,sender):
     if sender.value:
@@ -839,4 +860,4 @@ if __name__=='__main__':
   D.main()
   
 #x=[D.Eprom.data_from_address(a^255)^255 for a in range(1<<15)] #inverted data
-#with open('LedCube.bin','wb') as f: f.write(bytes(x))
+#with open('LedCubeA.bin','wb') as f: f.write(bytes(x))
