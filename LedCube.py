@@ -484,6 +484,15 @@ class keyNode(scene.ShapeNode):
     def title(self,title):
       self.label.text=title
       
+class touchMarker(scene.ShapeNode):
+    def __init__(self,radius=20,fill_color=(0,0,0,0.5),stroke_color='clear',title=None,stroke_width=None,id=None,*args,**kwargs):
+      path=ui.Path.oval(0,0,2*radius,2*radius)
+      if not stroke_width:
+        stroke_width=radius*0.1
+      path.line_width=stroke_width
+      super().__init__(path=path,fill_color=fill_color,stroke_color=stroke_color,*args,**kwargs)
+
+      
 class keypadNode(scene.ShapeNode):
     def __init__(self, radius=150, fill_color='white', stroke_color='black',keytitles=None, stroke_width=3,   on_output_change=None,orientation=((1,0),(0,1)),*args, **kwargs):
       path=ui.Path.oval(0,0,2*radius,2*radius)
@@ -551,13 +560,16 @@ class MyScene(scene.Scene):
             self.Eprom= ICNode(pins=Eprom.pins, position=(54,435), size=(145,320), anchor_point=(0,0), color='white', parent=self)     
             self.message=scene.LabelNode(scale=1.0,position=(5,5), anchor_point=(0,0),  text='messagebox '*5,font=('Courier-Bold',20),parent=self,color='black')
             self.messagetext=''
+            self.touchmarkers={}
     def touch_began(self,touch): 
+       self.touchmarkers[touch]=touchMarker(position=touch.location,anchor_point=(0.5,0.5),parent=self)
        for node in self.children:
             if hasattr(node, 'touch_began'):
                 if touch.location in node.frame:
                     node.touch_began(touch)
 #       print(f'began {touch.location},{touch.touch_id}')
     def touch_moved(self,touch):
+       self.touchmarkers[touch].position=touch.location
        for node in self.children:
             if hasattr(node, 'touch_moved'):
                 if touch.location in node.frame:
@@ -565,6 +577,7 @@ class MyScene(scene.Scene):
 
 #       print(f'moved {touch.location},{touch.touch_id}')
     def touch_ended(self,touch): 
+       self.touchmarkers.pop(touch).remove_from_parent()
        for node in self.children:
             if hasattr(node, 'touch_ended'):
                 if touch.location in node.frame:
@@ -572,6 +585,8 @@ class MyScene(scene.Scene):
 #       print(f'ended {touch.location},{touch.touch_id}')
     def update(self):
       if not self.touches:
+        while self.touchmarkers:
+          touchmarkers.popitem().remove_from_parent()
         for node in self.children:
             if hasattr(node, 'reset_touches'):
               node.reset_touches()
