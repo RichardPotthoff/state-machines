@@ -586,7 +586,7 @@ class MyScene(scene.Scene):
     def update(self):
       if not self.touches:
         while self.touchmarkers:
-          touchmarkers.popitem().remove_from_parent()
+          touchmarkers.popitem()[1].remove_from_parent()
         for node in self.children:
             if hasattr(node, 'reset_touches'):
               node.reset_touches()
