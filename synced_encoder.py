@@ -109,15 +109,15 @@ class StateTable(scene.ShapeNode):
     self.add_child(text)
     p=ui.Path()
     p.move_to(0,0)
-    p.line_to(0,self.size.h-58)
+    p.line_to(0,self.size.h-58+25)
     p.move_to(19*6,0)
-    p.line_to(19*6,self.size.h-58)
+    p.line_to(19*6,self.size.h-58+25) 
     self.cursor=ShapeNode(p)
     self.cursor.anchor_point=(0,0)
     self.cursor.position=(self.size.w-200,0)
     self.cursor.stroke_color=(0,0,0)
     self.add_child(self.cursor)
-    self.stateLabel=LabelNode('',position=(0,13),anchor_point=(0,0),color='#000000',scale=1,font=('Ubuntu Mono',14))
+    self.stateLabel=LabelNode('',position=(-100,13),anchor_point=(0,0),color='#000000',scale=1,font=('Ubuntu Mono',14))
     self.phase=0.75
     self.state=0
     self.add_child(self.stateLabel)
@@ -130,7 +130,7 @@ class StateTable(scene.ShapeNode):
   @phase.setter
   def phase(self,phi):
     self.phase_=4*(frac(1/8+phi)%1)
-    self.cursor.position=(self.size.w-200-9+18*self.phase_,30)
+    self.cursor.position=(self.size.w-200-9+18*self.phase_,30-25)
     self.updateState()
   @property
   def state(self):
@@ -170,14 +170,14 @@ class dial(scene.Node):
     p.add_arc(0,0,r1,ang1/2,0,False)
     p.close()   
     rcorr=(cos(ang1/2)*r1+r2)/2
-    rcorr=0.0
+#    rcorr=0.0
     for ang in [(4*i+3)*(2*pi/n) for i in (*range(self.n//4),-0.5)]:
       flag=ShapeNode(p)
       flag.fill_color=(0,0,0)
       flag.stroke_color=(0,0,0)
       flag.alpha=0.8
       flag.position=(cos(ang)*rcorr,sin(ang)*rcorr)
-      flag.anchor_point=(0.0,0.5)
+#      flag.anchor_point=(0.0,0.5)
       flag.rotation=ang
       self.add_child(flag)
       self.all_flags.append(flag)
@@ -215,7 +215,7 @@ class dial_lock (Scene):
     for pos in ((xc+Rled*cos(phi),yc+Rled*sin(phi)) for phi in (self.phi1,self.phi2)):
       circ=scene.ShapeNode(ui.Path.oval(0,0,2*rled,2*rled),fill_color='#00ffde',stroke_color='#000000',position=pos)
       self.add_child(circ)
-    self.statusLed=scene.ShapeNode(ui.Path.oval(0,0,2*rled,2*rled),color='#ff0000',position=(self.size.h-20,20))
+    self.statusLed=scene.ShapeNode(ui.Path.oval(0,0,2*rled,2*rled),color='#ff0000',position=(self.size.h-20-100,20))
     self.add_child(self.statusLed)
     self.dial=dial(self.size.h/2,self.size.h/2,0.9*r,r,n,scale=1.0)
     self.add_child(self.dial)

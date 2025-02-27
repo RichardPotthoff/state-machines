@@ -646,10 +646,11 @@ class Demo:
     v1width=650
     self.view1=ui.View(frame=(256+768-v1width,0,v1width,v1width))
     self.messagetext=''
-    self.rbtn1=ui.SegmentedControl(frame=(5.0,340.0,304.0,34.0), segments=('auto','xyz','123','maze','hamming'), action= self.rbutton_tapped)
-    self.switch1=ui.Switch(frame=(6.0,34.0,51.0,31.0),action=self.setPin)
+    shift_y=-24
+    self.rbtn1=ui.SegmentedControl(frame=(5.0,340.0+shift_y,304.0,34.0), segments=('auto','xyz','123','maze','hamming'), action= self.rbutton_tapped)
+    self.switch1=ui.Switch(frame=(6.0,34.0+shift_y,51.0,31.0),action=self.setPin)
     self.switch1.targetPin=2
-    self.switch2=ui.Switch(frame=(197,167,51.0,31.0),action=self.setPin)
+    self.switch2=ui.Switch(frame=(197,167+shift_y,51.0,31.0),action=self.setPin)
     self.switch2.targetPin=21
     self.sv.add_subview(self.view1)
     self.sv.add_subview(self.rbtn1)
